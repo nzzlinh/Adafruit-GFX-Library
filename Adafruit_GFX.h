@@ -7,7 +7,6 @@
 #else
  #include "WProgram.h"
 #endif
-#include "gfxfont.h"
 
 /// A generic graphics superclass that can handle all sorts of drawing. At a minimum you can subclass and provide drawPixel(). At a maximum you can do a ton of overriding to optimize. Used for any/all Adafruit displays!
 class Adafruit_GFX : public Print {
@@ -100,7 +99,6 @@ class Adafruit_GFX : public Print {
     setTextColor(uint16_t c, uint16_t bg),
     setTextSize(uint8_t s),
     setTextWrap(boolean w),
-    setFont(const GFXfont *f = NULL),
     getTextBounds(const char *string, int16_t x, int16_t y,
       int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
     getTextBounds(const __FlashStringHelper *s, int16_t x, int16_t y,
@@ -144,8 +142,6 @@ class Adafruit_GFX : public Print {
     rotation;       ///< Display rotation (0 thru 3)
   boolean
     wrap;           ///< If set, 'wrap' text at right edge of display
-  GFXfont
-    *gfxFont;       ///< Pointer to special font
 };
 
 
