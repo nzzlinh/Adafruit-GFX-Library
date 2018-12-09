@@ -1,3 +1,4 @@
+.DS_Store
 default.vim
 fontconvert/fontconvert
 # Our handy .gitignore for automation ease
