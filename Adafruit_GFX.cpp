@@ -1033,7 +1033,8 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
 
     startWrite();
     for(int8_t i=0; i<16; i++ ) {
-        uint8_t line = pgm_read_byte(&font[c * 16 + i]);
+        const unsigned char* font = Unifont[0].glyphs;
+        uint8_t line = pgm_read_byte(&font[(c - Unifont[0].start) * 16 + i]);
         for(int8_t j=7; j>= 0; j--, line >>= 1) {
             if(line & 1) {
                 if(size == 1)
