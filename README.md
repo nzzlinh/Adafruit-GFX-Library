@@ -1,4 +1,18 @@
-# Adafruit GFX Library # [![Build Status](https://travis-ci.org/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
+# Notes on Joey's fork of Adafruit GFX Library
+
+This fork of the Adafruit GFX Library intends to support the display of Unicode characters in the basic multilingual plane (BMP). It achieves this by replacing the standard 5x7 font with [GNU Unifont](http://unifoundry.com/unifont/index.html), an 8x16 (in some cases 16x16) pixel font that includes glyphs for every code point in the BMP. It also removes all support for graphic fonts.
+
+This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` method; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
+
+The BMP covers code points from U+0000 to U+FFFF. Currently this library works with most code points from U+0020 to U+32FF, with some caveats:
+
+* This is very much a work in progress and I haven't gotten around to niceities like bounds checking; you'll almost certainly crash if you try to display glyphs outside of the included range.
+* I also haven't gotten to double-width glyphs yet; they're marked as "truncated" in the font file and appear garbled.
+* Right to left scripts don't work, and in particular Arabic appears as isolated letterforms instead of connected script.
+* **The font is HUGE.** This is less than a quarter of the BMP and it will fill almost all of the 256 kilobytes of flash on a [Feather M0](https://www.adafruit.com/product/2772). You'd likely need a megabyte of program memory to hold the whole Unifont.
+
+
+# Original README: Adafruit GFX Library # [![Build Status](https://travis-ci.org/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
 
 This is the core graphics library for all our displays, providing a common set of graphics primitives (points, lines, circles, etc.). It needs to be paired with a hardware-specific library for each display device we carry (to handle the lower-level functions).
 
