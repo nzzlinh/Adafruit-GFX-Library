@@ -33,6 +33,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "Adafruit_GFX.h"
 #include "glcdfont.c"
+#include "utf8_decode.h"
+#include "utf8_decode.c"
 #ifdef __AVR__
   #include <avr/pgmspace.h>
 #elif defined(ESP8266) || defined(ESP32)
@@ -1121,6 +1123,28 @@ void Adafruit_GFX::writeCodepoint(uint16_t c) {
         cursor_x += textsize * 8;          // Advance x one char
     }
 }
+
+
+size_t Adafruit_GFX::printlnUTF8(char *string) {
+    size_t retVal = printUTF8(string);
+    retVal += print('\n');
+    return retVal;
+}
+
+size_t Adafruit_GFX::printUTF8(char *string) {
+    size_t retVal = 0;
+    utf8_decode_init(string, strlen(string));
+    do {
+        int c = utf8_decode_next();
+        if (c == UTF8_END || c == UTF8_ERROR)
+            return retVal;
+        writeCodepoint(c);
+    } while (1);
+}
+
+
+
+
 /**************************************************************************/
 /*!
     @brief  Print one byte/character of data, used to support print()
