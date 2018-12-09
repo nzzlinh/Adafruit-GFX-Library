@@ -1055,6 +1055,72 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     }
     endWrite();
 }
+
+// Draw a Unicode character
+/**************************************************************************/
+/*!
+   @brief   Draw a single character
+    @param    x   Bottom left corner x coordinate
+    @param    y   Bottom left corner y coordinate
+    @param    c   The 16-bit Unicode codepoint (yes this only supports the BMP)
+    @param    color 16-bit 5-6-5 Color to draw chraracter with
+    @param    bg 16-bit 5-6-5 Color to fill background with (if same as color, no background)
+    @param    size  Font magnification level, 1 is 'original' size
+*/
+/**************************************************************************/
+void Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color,
+      uint16_t bg, uint8_t size) {
+    if((x >= _width)            || // Clip right
+       (y >= _height)           || // Clip bottom
+       ((x + 6 * size - 1) < 0) || // Clip left
+       ((y + 8 * size - 1) < 0))   // Clip top
+        return;
+
+    uint8_t block = c >> 8;
+    uint8_t charindex = c & 0x00FF;
+    startWrite();
+    for(int8_t i=0; i<16; i++ ) {
+        const unsigned char* font = Unifont[block].glyphs;
+        uint8_t line = pgm_read_byte(&font[(charindex - Unifont[block].start) * 16 + i]);
+        for(int8_t j=7; j>= 0; j--, line >>= 1) {
+            if(line & 1) {
+                if(size == 1)
+                    writePixel(x+j, y+i, color);
+                else
+                    writeFillRect(x+j*size, y+i*size, size, size, color);
+            } else if(bg != color) {
+                if(size == 1)
+                    writePixel(x+j, y+i, bg);
+                else
+                    writeFillRect(x+j*size, y+i*size, size, size, bg);
+            }
+        }
+    }
+    if(bg != color) { // If opaque, draw vertical line for last column
+        if(size == 1) writeFastVLine(x+8, y, 16, bg);
+        else          writeFillRect(x+8*size, y, size, 16*size, bg);
+    }
+    endWrite();
+}
+/**************************************************************************/
+/*!
+    @brief  Print one byte/character of data, used to support print()
+    @param  c  The 8-bit ascii character to write
+*/
+/**************************************************************************/
+void Adafruit_GFX::writeCodepoint(uint16_t c) {
+    if(c == '\n') {                        // Newline?
+        cursor_x  = 0;                     // Reset x to zero,
+        cursor_y += textsize * 16;          // advance y one line
+    } else if(c != '\r') {                 // Ignore carriage returns
+        if(wrap && ((cursor_x + textsize * 8) > _width)) { // Off right?
+            cursor_x  = 0;                 // Reset x to zero,
+            cursor_y += textsize * 16;      // advance y one line
+        }
+        drawCodepoint(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
+        cursor_x += textsize * 8;          // Advance x one char
+    }
+}
 /**************************************************************************/
 /*!
     @brief  Print one byte/character of data, used to support print()
