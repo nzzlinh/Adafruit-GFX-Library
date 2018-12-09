@@ -87,7 +87,6 @@ WIDTH(w), HEIGHT(h)
     textsize  = 1;
     textcolor = textbgcolor = 0xFFFF;
     wrap      = true;
-    _cp437    = false;
     gfxFont   = NULL;
 }
 
@@ -1035,8 +1034,6 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
            ((y + 8 * size - 1) < 0))   // Clip top
             return;
 
-        if(!_cp437 && (c >= 176)) c++; // Handle 'classic' charset behavior
-
         startWrite();
         for(int8_t i=0; i<16; i++ ) {
             uint8_t line = pgm_read_byte(&font[c * 16 + i]);
@@ -1208,7 +1205,7 @@ int16_t Adafruit_GFX::getCursorY(void) const {
 /**************************************************************************/
 /*!
     @brief   Set text 'magnification' size. Each increase in s makes 1 pixel that much bigger.
-    @param  s  Desired text size. 1 is default 6x8, 2 is 12x16, 3 is 18x24, etc
+    @param  s  Desired text size. 1 is default 8x16, 2 is 16x32, 3 is 24x48, etc
 */
 /**************************************************************************/
 void Adafruit_GFX::setTextSize(uint8_t s) {
@@ -1283,24 +1280,8 @@ void Adafruit_GFX::setRotation(uint8_t x) {
 
 /**************************************************************************/
 /*!
-    @brief Enable (or disable) Code Page 437-compatible charset.
-    There was an error in glcdfont.c for the longest time -- one character
-    (#176, the 'light shade' block) was missing -- this threw off the index
-    of every character that followed it.  But a TON of code has been written
-    with the erroneous character indices.  By default, the library uses the
-    original 'wrong' behavior and old sketches will still work.  Pass 'true'
-    to this function to use correct CP437 character values in your code.
-    @param  x  Whether to enable (True) or not (False)
-*/
-/**************************************************************************/
-void Adafruit_GFX::cp437(boolean x) {
-    _cp437 = x;
-}
-
-/**************************************************************************/
-/*!
     @brief Set the font to display when print()ing, either custom or default
-    @param  f  The GFXfont object, if NULL use built in 6x8 font
+    @param  f  The GFXfont object, if NULL use built in Unifont
 */
 /**************************************************************************/
 void Adafruit_GFX::setFont(const GFXfont *f) {
