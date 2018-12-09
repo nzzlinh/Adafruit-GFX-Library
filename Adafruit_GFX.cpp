@@ -1038,25 +1038,25 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         if(!_cp437 && (c >= 176)) c++; // Handle 'classic' charset behavior
 
         startWrite();
-        for(int8_t i=0; i<5; i++ ) { // Char bitmap = 5 columns
-            uint8_t line = pgm_read_byte(&font[c * 5 + i]);
-            for(int8_t j=0; j<8; j++, line >>= 1) {
+        for(int8_t i=0; i<16; i++ ) {
+            uint8_t line = pgm_read_byte(&font[c * 16 + i]);
+            for(int8_t j=7; j>= 0; j--, line >>= 1) {
                 if(line & 1) {
                     if(size == 1)
-                        writePixel(x+i, y+j, color);
+                        writePixel(x+j, y+i, color);
                     else
-                        writeFillRect(x+i*size, y+j*size, size, size, color);
+                        writeFillRect(x+j*size, y+i*size, size, size, color);
                 } else if(bg != color) {
                     if(size == 1)
-                        writePixel(x+i, y+j, bg);
+                        writePixel(x+j, y+i, bg);
                     else
-                        writeFillRect(x+i*size, y+j*size, size, size, bg);
+                        writeFillRect(x+j*size, y+i*size, size, size, bg);
                 }
             }
         }
         if(bg != color) { // If opaque, draw vertical line for last column
-            if(size == 1) writeFastVLine(x+5, y, 8, bg);
-            else          writeFillRect(x+5*size, y, size, 8*size, bg);
+            if(size == 1) writeFastVLine(x+8, y, 16, bg);
+            else          writeFillRect(x+8*size, y, size, 16*size, bg);
         }
         endWrite();
 
@@ -1133,14 +1133,14 @@ size_t Adafruit_GFX::write(uint8_t c) {
 
         if(c == '\n') {                        // Newline?
             cursor_x  = 0;                     // Reset x to zero,
-            cursor_y += textsize * 8;          // advance y one line
+            cursor_y += textsize * 16;          // advance y one line
         } else if(c != '\r') {                 // Ignore carriage returns
-            if(wrap && ((cursor_x + textsize * 6) > _width)) { // Off right?
+            if(wrap && ((cursor_x + textsize * 8) > _width)) { // Off right?
                 cursor_x  = 0;                 // Reset x to zero,
-                cursor_y += textsize * 8;      // advance y one line
+                cursor_y += textsize * 16;      // advance y one line
             }
             drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
-            cursor_x += textsize * 6;          // Advance x one char
+            cursor_x += textsize * 8;          // Advance x one char
         }
 
     } else { // Custom font
@@ -1372,20 +1372,20 @@ void Adafruit_GFX::charBounds(char c, int16_t *x, int16_t *y,
 
         if(c == '\n') {                     // Newline?
             *x  = 0;                        // Reset x to zero,
-            *y += textsize * 8;             // advance y one line
+            *y += textsize * 16;             // advance y one line
             // min/max x/y unchaged -- that waits for next 'normal' character
         } else if(c != '\r') {  // Normal char; ignore carriage returns
-            if(wrap && ((*x + textsize * 6) > _width)) { // Off right?
+            if(wrap && ((*x + textsize * 8) > _width)) { // Off right?
                 *x  = 0;                    // Reset x to zero,
-                *y += textsize * 8;         // advance y one line
+                *y += textsize * 16;         // advance y one line
             }
-            int x2 = *x + textsize * 6 - 1, // Lower-right pixel of char
-                y2 = *y + textsize * 8 - 1;
+            int x2 = *x + textsize * 8 - 1, // Lower-right pixel of char
+                y2 = *y + textsize * 16 - 1;
             if(x2 > *maxx) *maxx = x2;      // Track max x, y
             if(y2 > *maxy) *maxy = y2;
             if(*x < *minx) *minx = *x;      // Track min x, y
             if(*y < *miny) *miny = *y;
-            *x += textsize * 6;             // Advance x one char
+            *x += textsize * 8;             // Advance x one char
         }
     }
 }
