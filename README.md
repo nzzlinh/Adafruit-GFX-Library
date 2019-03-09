@@ -12,7 +12,7 @@ The BMP covers code points from U+0000 to U+FFFF. Currently this library works w
 * **The font is HUGE.** This is less than a quarter of the BMP and it will fill almost all of the 256 kilobytes of flash on a [Feather M0](https://www.adafruit.com/product/2772). You'd likely need a megabyte of program memory to hold the whole Unifont.
 
 
-# Original README: Adafruit GFX Library # [![Build Status](https://travis-ci.org/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
+# Original README: Adafruit GFX Library # [![Build Status](https://travis-ci.com/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
 
 This is the core graphics library for all our displays, providing a common set of graphics primitives (points, lines, circles, etc.). It needs to be paired with a hardware-specific library for each display device we carry (to handle the lower-level functions).
 
