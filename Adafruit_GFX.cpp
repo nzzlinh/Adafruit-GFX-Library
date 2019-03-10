@@ -1040,9 +1040,9 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         return;
 
     startWrite();
+    const unsigned char* font = Unifont[0].glyphs;
     for(int8_t i=0; i<16; i++ ) {
-        const unsigned char* font = Unifont[0].glyphs;
-        uint8_t line = pgm_read_byte(&font[(c - Unifont[0].start) * 16 + i]);
+        uint8_t line = pgm_read_byte(&font[(c - 0x20) * 16 + i]);
         for(int8_t j=7; j>= 0; j--, line >>= 1) {
             if(line & 1) {
                 if(size == 1)
@@ -1074,41 +1074,107 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
     @param    color 16-bit 5-6-5 Color to draw chraracter with
     @param    bg 16-bit 5-6-5 Color to fill background with (if same as color, no background)
     @param    size  Font magnification level, 1 is 'original' size
+    @returns  the number of pixels to advance
 */
 /**************************************************************************/
-void Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color,
+int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color,
       uint16_t bg, uint8_t size) {
     if((x >= _width)            || // Clip right
        (y >= _height)           || // Clip bottom
        ((x + 6 * size - 1) < 0) || // Clip left
        ((y + 8 * size - 1) < 0))   // Clip top
-        return;
+        return 0;
 
     uint8_t block = c >> 8;
     uint8_t charindex = c & 0x00FF;
     startWrite();
-    for(int8_t i=0; i<16; i++ ) {
-        const unsigned char* font = Unifont[block].glyphs;
-        uint8_t line = pgm_read_byte(&font[(charindex - Unifont[block].start) * 16 + i]);
-        for(int8_t j=7; j>= 0; j--, line >>= 1) {
-            if(line & 1) {
-                if(size == 1)
-                    writePixel(x+j, y+i, color);
-                else
-                    writeFillRect(x+j*size, y+i*size, size, size, color);
-            } else if(bg != color) {
-                if(size == 1)
-                    writePixel(x+j, y+i, bg);
-                else
-                    writeFillRect(x+j*size, y+i*size, size, size, bg);
-            }
-        }
+    const unsigned char* font = Unifont[block].glyphs;
+    if (!font)
+        return 0; // TODO: figure out someplace to stash the rest of the font.
+
+    int tableWidth = (int)Unifont[block].width;
+    uint8_t characterWidth;
+    switch (tableWidth)
+    {
+        case 0:
+            // won't happen; width is only 0 when font is null, we bailed on that case earlier.
+            break;
+        case 1:
+            characterWidth = 1;
+            break;
+        case 2:
+            characterWidth = 2;
+            break;
+        default:
+            tableWidth = 2;
+            const uint8_t *widths = (const uint8_t *)Unifont[block].width;
+            uint8_t mask = pgm_read_byte(widths + charindex / 8);
+            characterWidth = mask & (1 << (7 - charindex % 8));
+
+            if (characterWidth)
+                characterWidth = 2;
+            else
+                characterWidth = 1;
     }
+
+    const int start = block == 0 ? 0x20 : 0;
+    switch (characterWidth)
+    {
+        case 1:
+            for(int8_t i=0; i<characterWidth*16; i++ )
+            {
+                uint8_t line = pgm_read_byte(&font[(charindex - start) * 16 * tableWidth + i]);
+                for(int8_t j=7; j>= 0; j--, line >>= 1)
+                {
+                    if(line & 1)
+                    {
+                        if(size == 1)
+                            writePixel(x+j, y+i, color);
+                        else
+                            writeFillRect(x+j*size, y+i*size, size, size, color);
+                    }
+                    else if(bg != color)
+                    {
+                        if(size == 1)
+                            writePixel(x+j, y+i, bg);
+                        else
+                            writeFillRect(x+j*size, y+i*size, size, size, bg);
+                    }
+                }
+            }
+            break;
+        case 2:
+            for(int8_t i=0; i<characterWidth*16; i++ )
+            {
+                uint8_t line = pgm_read_byte(&font[(charindex - start) * 16 * tableWidth + i]);
+                for(int8_t j=7; j>= 0; j--, line >>= 1)
+                {
+                    if(line & 1)
+                    {
+                        if(size == 1)
+                            writePixel(x+j+(i%2?8:0), y+i/2, color);
+                        else
+                            writeFillRect(x+(j+(i%2?8:0))*size, y+(i/2)*size, size, size, color);
+                    }
+                    else if(bg != color)
+                    {
+                        if(size == 1)
+                            writePixel(x+j+(i%2?8:0), y+i/2, bg);
+                        else
+                            writeFillRect(x+(j+(i%2?8:0))*size, y+(i/2)*size, size, size, bg);
+                    }
+                }
+            }
+            break;
+    }
+
     if(bg != color) { // If opaque, draw vertical line for last column
-        if(size == 1) writeFastVLine(x+8, y, 16, bg);
-        else          writeFillRect(x+8*size, y, size, 16*size, bg);
+        if(size == 1) writeFastVLine(x+8*characterWidth, y, 16, bg);
+        else          writeFillRect(x+8*characterWidth*size, y, size, 16*size, bg);
     }
     endWrite();
+
+    return characterWidth * 8;
 }
 /**************************************************************************/
 /*!
@@ -1125,8 +1191,8 @@ void Adafruit_GFX::writeCodepoint(uint16_t c) {
             cursor_x  = 0;                 // Reset x to zero,
             cursor_y += textsize * 16;      // advance y one line
         }
-        drawCodepoint(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
-        cursor_x += textsize * 8;          // Advance x one char
+        int advance = drawCodepoint(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
+        cursor_x += textsize * advance;    // Advance x one char
     }
 }
 
