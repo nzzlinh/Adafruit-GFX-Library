@@ -4690,6 +4690,7 @@ const UnifontBlock Unifont[] PROGMEM = {
     {(const unsigned char*)0, (const uint8_t*)0},
     {(const unsigned char*)0, (const uint8_t*)0},
     {(const unsigned char*)0, (const uint8_t*)0},
+    {(const unsigned char*)0, (const uint8_t*)0},
 };
 
 #endif // FONT8x16_H

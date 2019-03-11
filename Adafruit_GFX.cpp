@@ -1086,13 +1086,14 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
         return 0;
 
     uint8_t block = c >> 8;
+    uint8_t index = index_for_block(block);
     uint8_t charindex = c & 0x00FF;
     startWrite();
-    const unsigned char* font = Unifont[block].glyphs;
+    const unsigned char* font = Unifont[index].glyphs;
     if (!font)
         return 0; // TODO: figure out someplace to stash the rest of the font.
 
-    int tableWidth = (int)Unifont[block].width;
+    int tableWidth = (int)Unifont[index].width;
     uint8_t characterWidth;
     switch (tableWidth)
     {
@@ -1107,7 +1108,7 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
             break;
         default:
             tableWidth = 2;
-            const uint8_t *widths = (const uint8_t *)Unifont[block].width;
+            const uint8_t *widths = (const uint8_t *)Unifont[index].width;
             uint8_t mask = pgm_read_byte(widths + charindex / 8);
             characterWidth = mask & (1 << (7 - charindex % 8));
 
@@ -1469,6 +1470,19 @@ void Adafruit_GFX::getTextBounds(const __FlashStringHelper *str,
         *h  = maxy - miny + 1;
     }
 }
+
+// Unifont skips some blocks entirely (surrogate pairs, private use areas, etc.) so
+// rather than waste precious memory on them, this method takes the desired block
+// and translates it into the index where it can be found.
+inline uint8_t Adafruit_GFX::index_for_block(uint8_t block)
+{
+    if (block < 0xD8)
+        return block;
+    if (block == 0xF9)
+        return 216;
+    return block - 33;
+}
+
 
 /**************************************************************************/
 /*!

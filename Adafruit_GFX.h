@@ -150,6 +150,8 @@ class Adafruit_GFX : public Print {
     rotation;       ///< Display rotation (0 thru 3)
   boolean
     wrap;           ///< If set, 'wrap' text at right edge of display
+ private:
+  inline uint8_t index_for_block(uint8_t block);
 };
 
 
