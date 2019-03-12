@@ -8,6 +8,15 @@
  #include "WProgram.h"
 #endif
 
+#define UNIFONT_USE_SPI_FLASH
+
+
+#ifdef UNIFONT_USE_SPI_FLASH
+#include <SPI.h>
+#include <Adafruit_SPIFlash.h>
+#include <Adafruit_SPIFlash_FatFs.h>
+#endif // UNIFONT_USE_SPI_FLASH
+
 /// A generic graphics superclass that can handle all sorts of drawing. At a minimum you can subclass and provide drawPixel(). At a maximum you can do a ton of overriding to optimize. Used for any/all Adafruit displays!
 class Adafruit_GFX : public Print {
 
@@ -50,6 +59,7 @@ class Adafruit_GFX : public Print {
 
   // These exist only with Adafruit_GFX (no subclass overrides)
   void
+    loadUnifont(),
     drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color),
     drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername,
       uint16_t color),
@@ -149,9 +159,14 @@ class Adafruit_GFX : public Print {
     textsize,       ///< Desired magnification of text to print()
     rotation;       ///< Display rotation (0 thru 3)
   boolean
-    wrap;           ///< If set, 'wrap' text at right edge of display
+    wrap,           ///< If set, 'wrap' text at right edge of display
+    unifontavailable;///< if set, unifont.bin is available on the SPI filesystem
  private:
   inline uint8_t index_for_block(uint8_t block);
+#ifdef UNIFONT_USE_SPI_FLASH
+  File
+    unifont;        // file handle to unifont.bin, if available
+#endif // UNIFONT_USE_SPI_FLASH
 };
 
 

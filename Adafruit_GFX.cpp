@@ -41,6 +41,23 @@ POSSIBILITY OF SUCH DAMAGE.
   #include <pgmspace.h>
 #endif
 
+#ifdef UNIFONT_USE_SPI_FLASH
+
+#define FLASH_TYPE SPIFLASHTYPE_W25Q16BV
+
+#if (SPI_INTERFACES_COUNT == 1)
+  #define FLASH_SS       SS
+  #define FLASH_SPI_PORT SPI
+#else
+  #define FLASH_SS       SS1
+  #define FLASH_SPI_PORT SPI1
+#endif
+
+Adafruit_SPIFlash flash(FLASH_SS, &FLASH_SPI_PORT);
+Adafruit_M0_Express_CircuitPython pythonfs(flash);
+
+#endif // UNIFONT_USE_SPI_FLASH
+
 // Many (but maybe not all) non-AVR board installs define macros
 // for compatibility with existing PROGMEM-reading AVR code.
 // Do our own checks and defines here for good measure...
@@ -89,8 +106,20 @@ WIDTH(w), HEIGHT(h)
     textsize  = 1;
     textcolor = textbgcolor = 0xFFFF;
     wrap      = true;
+    unifontavailable = false;
 }
 
+void Adafruit_GFX::loadUnifont()
+{
+    #ifdef UNIFONT_USE_SPI_FLASH
+    if (flash.begin(FLASH_TYPE) && pythonfs.begin() && pythonfs.exists("unifont.bin"))
+    {
+        unifont = pythonfs.open("unifont.bin", FILE_READ);
+        if (unifont)
+            unifontavailable = true;
+    }
+    #endif // UNIFONT_USE_SPI_FLASH
+}
 /**************************************************************************/
 /*!
    @brief    Write a line.  Bresenham's algorithm - thx wikpedia
@@ -1088,15 +1117,10 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     uint8_t block = c >> 8;
     uint8_t index = index_for_block(block);
     uint8_t charindex = c & 0x00FF;
-    startWrite();
-    if (!(Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM))
-        return 0; // TODO: put the rest of the font on a flash chip and get data from there.
-
 
     const unsigned char* font = Unifont[index].glyphs;
     uint8_t tableWidth;
     uint8_t characterWidth;
-
     if (Unifont[index].flags & UNIFONT_BLOCK_IS_NARROW)
     {
         tableWidth = 1;
@@ -1108,6 +1132,109 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     } else
     {
         tableWidth = 2;
+        characterWidth = 0; // we'll need to figure this out in a minute.
+    }
+
+#ifdef UNIFONT_USE_SPI_FLASH
+    uint32_t charOffset;
+    uint32_t widthOffset;
+    uint8_t mask;
+    uint8_t buf[32];
+#endif // UNIFONT_USE_SPI_FLASH
+
+    startWrite();
+    if (Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+        goto DrawCodepointFromProgmem;
+
+DrawCodepointFromFlash:
+#ifdef UNIFONT_USE_SPI_FLASH
+    if (!unifontavailable)
+        return 0;
+    charOffset = 16 * tableWidth * charindex;
+    widthOffset = 16 * tableWidth * 256;
+    unifont.seek((uint32_t)font + widthOffset + charindex / 8);
+    mask = unifont.read();
+    if (mask & (1 << (7 - charindex % 8)))
+        characterWidth = 2;
+    else
+        characterWidth = 1;
+    unifont.seek((uint32_t)font + charOffset);
+    unifont.read(&buf, characterWidth*16);
+
+    switch (characterWidth)
+    {
+        case 1:
+            for(int8_t i=0; i<characterWidth*16; i++ )
+            {
+                uint8_t line = buf[i];
+                for(int8_t j=7; j>= 0; j--, line >>= 1)
+                {
+                    if(line & 1)
+                    {
+                        if(size == 1)
+                            writePixel(x+j, y+i, color);
+                        else
+                            writeFillRect(x+j*size, y+i*size, size, size, color);
+                    }
+                    else if(bg != color)
+                    {
+                        if(size == 1)
+                            writePixel(x+j, y+i, bg);
+                        else
+                            writeFillRect(x+j*size, y+i*size, size, size, bg);
+                    }
+                }
+            }
+            break;
+        case 2:
+            for(int8_t i=0; i<characterWidth*16; i++ )
+            {
+                uint8_t line = buf[i];
+                for(int8_t j=7; j>= 0; j--, line >>= 1)
+                {
+                    if(line & 1)
+                    {
+                        if(size == 1)
+                            writePixel(x+j+(i%2?8:0), y+i/2, color);
+                        else
+                            writeFillRect(x+(j+(i%2?8:0))*size, y+(i/2)*size, size, size, color);
+                    }
+                    else if(bg != color)
+                    {
+                        if(size == 1)
+                            writePixel(x+j+(i%2?8:0), y+i/2, bg);
+                        else
+                            writeFillRect(x+(j+(i%2?8:0))*size, y+(i/2)*size, size, size, bg);
+                    }
+                }
+            }
+            break;
+    }
+
+    endWrite();
+
+    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_CUSTOM_SPACING)
+    {
+        unifont.seek((uint32_t)font + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
+        mask = unifont.read();
+
+        if (mask & (1 << (7 - charindex % 8)))
+            return characterWidth * 8;
+        else
+            return 0;
+    } else
+    {
+        return characterWidth * 8;
+    }
+
+#else
+    return 0;
+#endif // UNIFONT_USE_SPI_FLASH
+
+DrawCodepointFromProgmem:
+    // wow we just did that. a goto. in 2019. what a time to be alive.
+    if (characterWidth == 0)
+    {
         const uint8_t *widths = (const uint8_t *)Unifont[index].glyphs + 8192;
         uint8_t mask = pgm_read_byte(widths + charindex / 8);
 
