@@ -1089,33 +1089,32 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     uint8_t index = index_for_block(block);
     uint8_t charindex = c & 0x00FF;
     startWrite();
+    if (!(Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM))
+        return 0; // TODO: put the rest of the font on a flash chip and get data from there.
+
+
     const unsigned char* font = Unifont[index].glyphs;
-    if (!font)
-        return 0; // TODO: figure out someplace to stash the rest of the font.
-
-    int tableWidth = (int)Unifont[index].width;
+    uint8_t tableWidth;
     uint8_t characterWidth;
-    switch (tableWidth)
-    {
-        case 0:
-            // won't happen; width is only 0 when font is null, we bailed on that case earlier.
-            break;
-        case 1:
-            characterWidth = 1;
-            break;
-        case 2:
-            characterWidth = 2;
-            break;
-        default:
-            tableWidth = 2;
-            const uint8_t *widths = (const uint8_t *)Unifont[index].width;
-            uint8_t mask = pgm_read_byte(widths + charindex / 8);
-            characterWidth = mask & (1 << (7 - charindex % 8));
 
-            if (characterWidth)
-                characterWidth = 2;
-            else
-                characterWidth = 1;
+    if (Unifont[index].flags & UNIFONT_BLOCK_IS_NARROW)
+    {
+        tableWidth = 1;
+        characterWidth = 1;
+    } else if (Unifont[index].flags & UNIFONT_BLOCK_IS_WIDE)
+    {
+        tableWidth = 2;
+        characterWidth = 2;
+    } else
+    {
+        tableWidth = 2;
+        const uint8_t *widths = (const uint8_t *)Unifont[index].glyphs + 8192;
+        uint8_t mask = pgm_read_byte(widths + charindex / 8);
+
+        if (mask & (1 << (7 - charindex % 8)))
+            characterWidth = 2;
+        else
+            characterWidth = 1;
     }
 
     const int start = block == 0 ? 0x20 : 0;
@@ -1175,7 +1174,19 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     }
     endWrite();
 
-    return characterWidth * 8;
+    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_CUSTOM_SPACING)
+    {
+        const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs + 4096 * tableWidth + 32;
+        uint8_t mask = pgm_read_byte(spacings + charindex / 8);
+
+        if (mask & (1 << (7 - charindex % 8)))
+            return characterWidth * 8;
+        else
+            return 0;
+    } else
+    {
+        return characterWidth * 8;
+    }
 }
 /**************************************************************************/
 /*!
