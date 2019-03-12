@@ -1,15 +1,21 @@
-# Notes on Joey's fork of Adafruit GFX Library
+# Notes on Joey's fork of the Adafruit GFX Library
 
 This fork of the Adafruit GFX Library intends to support the display of Unicode characters in the basic multilingual plane (BMP). It achieves this by replacing the standard 5x7 font with [GNU Unifont](http://unifoundry.com/unifont/index.html), an 8x16 (in some cases 16x16) pixel font that includes glyphs for every code point in the BMP. It also removes all support for graphic fonts.
 
+![Hello World example on a Feather M0 with a Sharp memory display](/example.jpg?raw=true)
+
 This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` method; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
 
-The BMP covers code points from U+0000 to U+FFFF. Currently this library works with all code points from U+0020 to U+10FF. It seamlessly handles both 8x16 and 16x16 glyphs, just feed it UTF-8 and it'll take care of the rest. Some caveats: 
+The BMP covers code points from U+0000 to U+FFFF. As configured in this repository, it works with all code points from U+0020 to U+1CFF, a cutoff point chosen because that's what fit on a Feather M0 with a minimal test suite. You can use the `unifontconvert/converter.py` tool to select just the blocks you need for your project.
 
-* Right to left scripts don't work at this time. 
+The library seamlessly handles both 8x16 and 16x16 glyphs, as well as non-spacing glyphs like accents. Easily display text from any language with a standard encoding — no need to switch code pages or add custom bitmaps just because you dared to want a degree symbol and an umlaut at the same time.
+
+Some caveats:
+
+* Diacritics sometimes appear off by one location.
+* Right to left scripts don't work at this time.
 * Arabic appears as isolated letterforms instead of connected script.
-* Some accents and diacritics incorrectly appear as a glyph next to the glyph they were intended to modify.
-* Characters above the included range currently do not display at all, and it's unlikely you'll be able to include all of the Unifont in program memory (it weighs in at about 1.8 megabytes). 
+* Characters outside the included ranges do not display at all or even advance the cursor.
 
 My next goal is to fit the whole Unifont onto the 2MB SPI flash chip included with the Feather M0 / M4 Express, so that this library can support literally every character in the basic multilingual plane.
 
