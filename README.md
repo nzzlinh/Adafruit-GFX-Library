@@ -1,23 +1,57 @@
 # Notes on Joey's fork of the Adafruit GFX Library
 
-This fork of the Adafruit GFX Library intends to support the display of Unicode characters in the basic multilingual plane (BMP). It achieves this by replacing the standard 5x7 font with [GNU Unifont](http://unifoundry.com/unifont/index.html), an 8x16 (in some cases 16x16) pixel font that includes glyphs for every code point in the BMP. It also removes all support for graphic fonts.
+This fork of the Adafruit GFX Library aims to support the seamless display of text in all the languages of the world. It achieves this by replacing the standard 5x7 font with the [GNU Unifont](http://unifoundry.com/unifont/index.html), an 8x16 (in some cases 16x16) pixel font that includes glyphs for every Unicode code point in the basic multilingual plane (BMP). It also removes all support for graphic fonts.
 
 ![Hello World example on a Feather M0 with a Sharp memory display](/example.jpg?raw=true)
 
 This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` method; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
 
-The BMP covers code points from U+0000 to U+FFFF. As configured in this repository, it works with all code points from U+0020 to U+1CFF, a cutoff point chosen because that's what fit on a Feather M0 with a minimal test suite. You can use the `unifontconvert/converter.py` tool to select just the blocks you need for your project.
+The BMP covers code points from U+0000 to U+FFFF. As configured in this repository, it works with all code points in Plane 0, from U+0020 to U+00FF. For code points outside this range, you can go one of three routes:
+
+* On a **Feather M0 Express** or **Feather M4 Express**, you can use the included 2-megabyte SPI Flash chip to store the whole Unifont. Useful if you want to support all the languages of the world, such as in an IOT project that draws text from the internet.
+* On other boards, you can use the `unifontconvert/converter.py` tool to select just the blocks you need for your project, and store them in program memory. Useful if you need a subset of the BMP, like ASCII and box drawing characters for a menu system, or Latin-1 and Greek for a dictionary of translations.
+* You can also combine these two approaches to include the most-needed blocks in program memory for performant display, while falling back to the Flash chip for other codepoints. Useful if, say, you expect to be displaying mostly Cyrillic text, but also want to have occasional access to other scripts, arrows, dingbats or symbols.
 
 The library seamlessly handles both 8x16 and 16x16 glyphs, as well as non-spacing glyphs like accents. Easily display text from any language with a standard encoding — no need to switch code pages or add custom bitmaps just because you dared to want a degree symbol and an umlaut at the same time.
 
-Some caveats:
+## Storing Unifont on SPI Flash
+
+To take advantage of the whole basic multilingual plane on a Feather Express:
+
+1. Copy the included `unifontconvert/unifont.bin` file to the CircuitPython file system that comes with your Feather M0 Express or Feather M4 Express. It should appear as a volume named `CIRCUITPY` when you plug in your board.
+2. When you write your sketch, initialize your display device as usual, but after calling `display.begin()`, call `display.loadUnifontFile()`.
+3. Replace any calls to `display.print()` and `display.println()` with `display.printUTF8(s)` and `display.printlnUTF8(s)`.
+
+If you have already loaded an Arduino sketch onto your board, the `CIRCUITPY` volume will not appear. You can follow these steps to install `unifont.bin`:
+
+1. While plugged in to your development machine, double-click the RESET button on your board. You should see a volume called `FEATHERBOOT` appear.
+2. If you wish to preserve your existing sketch, copy the `CURRENT.UF2` from `FEATHERBOOT` to your hard drive.
+3. Download the [latest CircuitPython release](https://github.com/adafruit/circuitpython/releases/tag/3.1.2) for your Feather — it should be a .UF2 file — to the root of the `FEATHERBOOT` volume. This will erase any existing sketch on the board.
+4. The `CIRCUITPY` volume should appear. Copy `unifont.bin` to the `CIRCUITPY` volume.
+
+At this point, if you wish to restore your previous sketch, repeat step 1 and drag the backed-up `CURRENT.UF2` to the `FEATHERBOOT` volume; it will reboot to your sketch. Alternately, you can write a new sketch in the Arduino IDE and build normally; even though you will never see the `CIRCUITPY` volume again, `unifont.bin` will remain safely on the SPI flash chip unless you erase it.
+
+Note that seeking through the font file on Flash is somewhat slower than reading glyphs from program memory. If your project primarily uses characters from one Unicode block, you might still want to follow the steps in "Using a subset of Unifont" to store that block in progmem.
+
+## Using a subset of Unifont
+
+If your board lacks an SPI flash chip (or you're using it for something else), you can also select just the subset of the BMP that you expect to need, and store it in program memory. Some blocks you might need: block 20 (symbols, superscript and subscript numbers); block 21 (fractions, arrows); block 25 (box drawing characters); blocks 26-27 (symbols and dingbats).
+
+To select the blocks you want for your project:
+
+1. In a terminal window, navigate to the `unifontconvert` directory.
+2. Run `python3 converter.py`, and select option 2 from the main menu.
+3. Select the blocks you wish to include in the Unifont font definition file, then enter `done` when finished.
+4. Select option 3 from the main menu to generate `glcdfont.c`. 
+5. Replace the `glcdfont.c` in the library root with the file generated by the converter utility.
+
+If you are not using the unifont.bin file at all, you will also want to remove `#define UNIFONT_USE_SPI_FLASH` from line 11 of `Adafruit_GFX.h`; this will save about 10 kilobytes of program storage.
+
+## Still on the TODO list
 
 * Diacritics sometimes appear off by one location.
 * Right to left scripts don't work at this time.
 * Arabic appears as isolated letterforms instead of connected script.
-* Characters outside the included ranges do not display at all or even advance the cursor.
-
-My next goal is to fit the whole Unifont onto the 2MB SPI flash chip included with the Feather M0 / M4 Express, so that this library can support literally every character in the basic multilingual plane.
 
 # Original README: Adafruit GFX Library # [![Build Status](https://travis-ci.com/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
 
