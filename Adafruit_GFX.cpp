@@ -1453,6 +1453,18 @@ void Adafruit_GFX::setRotation(uint8_t x) {
 
 /**************************************************************************/
 /*!
+    @brief Enable (or disable) Code Page 437-compatible charset.
+    DEPRECATED: The internal _cp437 property no longer exists and has no
+    meaning for a Unicode-aware implementation. This method remains as a
+    no-op for compatibility with existing sketches.
+    @param  x  Whether to enable (True) or not (False)
+*/
+/**************************************************************************/
+void Adafruit_GFX::cp437(boolean x) {
+}
+
+/**************************************************************************/
+/*!
     @brief    Helper to determine size of a character with current font/size.
        Broke this out as it's used by both the PROGMEM- and RAM-resident getTextBounds() functions.
     @param    c     The ascii character in question
