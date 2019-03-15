@@ -23,9 +23,14 @@
 #define UNIFONT_WIDE_BLOCK_LENGTH (8192)
 #define UNIFONT_BITMASK_LENGTH (32)
 
+typedef union {
+    const uint8_t* location;
+    const int32_t offset;
+} UnifontLocation;
+
 typedef struct {
-       const unsigned char* glyphs; // If low bit of flags is set, this is an address in progmem.
-                                    // Otherwise, it's an offset in the unifont.bin file.
+       const UnifontLocation glyphs;// If low bit of flags is set, use the location pointer.
+                                    // Otherwise, use the offset and look in the unifont.bin file.
        const uint8_t flags;         // 0b0000xxxx
                                     //       |||\_ This block is included in PROGMEM
                                     //       ||\__ This block contains exclusively narrow (16-byte) glyphs
@@ -38,7 +43,7 @@ typedef struct {
 } UnifontBlock;
 
 
-static const unsigned char block_00_data[] PROGMEM = {
+static const uint8_t block_00_data[] PROGMEM = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Code point 0020
     0x00, 0x00, 0x00, 0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x08, 0x08, 0x00, 0x00,  // Code point 0021
     0x00, 0x00, 0x22, 0x22, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // Code point 0022
