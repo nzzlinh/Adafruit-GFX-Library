@@ -4,7 +4,7 @@ This fork of the Adafruit GFX Library aims to support the seamless display of te
 
 ![Two e-ink displays, one OLED, a TFT and a memory LCD displaying a variety of Unicode examples: Hello World in ten languages; a series of icons and symbols; a handful of mathematical formulas; and a chapter of the Tao Te Ching in Chinese.](/example.jpg?raw=true)
 
-This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` method; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
+This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` and `display.printlnUTF8(s)` methods; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
 
 The BMP covers code points from U+0000 to U+FFFF. Unifont has glyphs for about 60,000 of those code points. At 16-32 bytes each, that's not going to fit on a microcontroller. So you have a few options:
 
@@ -14,9 +14,9 @@ The BMP covers code points from U+0000 to U+FFFF. Unifont has glyphs for about 6
 
 ## Storing Unifont on SPI Flash
 
-To take advantage of the whole basic multilingual plane on a Feather Express:
+To take advantage of the whole basic multilingual plane on a Feather M0 Express:
 
-1. Copy the included `unifontconvert/unifont.bin` file to the CircuitPython file system that comes with your Feather M0 Express or Feather M4 Express. It should appear as a volume named `CIRCUITPY` when you plug in your board.
+1. Copy the included `unifontconvert/unifont.bin` file to the CircuitPython file system that comes with your Feather M0 Express. It should appear as a volume named `CIRCUITPY` when you plug in your board.
 2. When you write your sketch, initialize your display device as usual, but after calling `display.begin()`, call `display.loadUnifontFile()`.
 
 If you have already loaded an Arduino sketch onto your board, the `CIRCUITPY` volume will not appear. You can follow these steps to install `unifont.bin`:
