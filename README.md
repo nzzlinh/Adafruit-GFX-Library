@@ -1,4 +1,4 @@
-# Notes on Joey's fork of the Adafruit GFX Library
+# Adafruit GFX × GNU Unifont: A global display library
 
 This fork of the Adafruit GFX Library aims to support the seamless display of text in all the languages of the world. It achieves this by replacing the standard 5x7 font with the [GNU Unifont](http://unifoundry.com/unifont/index.html), an 8x16 (in some cases 16x16) pixel font that includes glyphs for every Unicode code point in the basic multilingual plane (BMP). It also removes all support for graphic fonts.
 
@@ -6,13 +6,11 @@ This fork of the Adafruit GFX Library aims to support the seamless display of te
 
 This should function as a drop-in replacement for the Adafruit GFX Library, as long as you're not using graphic fonts. You can display a Unicode code point by calling `display.writeCodepoint(c)`, where c represents the Unicode code point (not its UTF-8 or UTF-16 representation). You can display a UTF-8 encoded string with the `display.printUTF8(s)` method; I've included a [Very Strict UTF-8 Decoder](https://github.com/douglascrockford/JSON-c/blob/master/utf8_decode.c) that will turn well-formed UTF-8 into code points suitable for display with `writeCodepoint`.
 
-The BMP covers code points from U+0000 to U+FFFF. As configured in this repository, it works with all code points in Plane 0, from U+0020 to U+00FF. For code points outside this range, you can go one of three routes:
+The BMP covers code points from U+0000 to U+FFFF. Unifont has glyphs for about 60,000 of those code points. At 16-32 bytes each, that's not going to fit on a microcontroller. So you have a few options:
 
 * On a **Feather M0 Express**, you can use the included 2-megabyte SPI Flash chip to store the whole Unifont. Useful if you want to support all the languages of the world, such as in an IOT project that draws text from the internet.
 * On other boards, you can use the `unifontconvert/converter.py` tool to select just the blocks you need for your project, and store them in program memory. Useful if you need a subset of the BMP, like ASCII and box drawing characters for a menu system, or Latin-1 and Greek for a dictionary of translations.
 * You can also combine these two approaches to include the most-needed blocks in program memory for performant display, while falling back to the Flash chip for other codepoints. Useful if, say, you expect to be displaying mostly Cyrillic text, but also want to have occasional access to other scripts, arrows, dingbats or symbols.
-
-The library seamlessly handles both 8x16 and 16x16 glyphs, as well as non-spacing glyphs like accents. Easily display text from any language with a standard encoding — no need to switch code pages or add custom bitmaps just because you dared to want a degree symbol and an umlaut at the same time.
 
 ## Storing Unifont on SPI Flash
 
@@ -34,7 +32,7 @@ Note that seeking through the font file on Flash is somewhat slower than reading
 
 ## Using a subset of Unifont
 
-If your board lacks an SPI flash chip (or you're using it for something else), you can also select just the subset of the BMP that you expect to need, and store it in program memory. Some blocks you might need: block 20 (symbols, superscript and subscript numbers); block 21 (fractions, arrows); block 25 (box drawing characters); blocks 26-27 (symbols and dingbats).
+If your board lacks an SPI flash chip (or you're using it for something else), you can also select just the subset of the BMP that you expect to need, and store it in program memory. Some blocks you might like to have: block 20 (superscript and subscript numbers); block 21 (fractions, arrows); block 25 (box drawing characters); blocks 26-27 (symbols and dingbats).
 
 To select the blocks you want for your project:
 
@@ -50,9 +48,9 @@ If you are not using the unifont.bin file at all, you will also want to remove `
 
 There are some edge cases that I hope to address eventually. These are the edge cases, and the current workarounds (which I fully intend to break once I fix the underlying behavior).
 
-* Combining marks in canonically ordered strings will appear off by one (i.e. `José` is `U+004A U+006F U+0073 U+0065 U+0301`, but this library will display that as `Jose´`). To coax it into displaying the string correctly, you need to include all combining marks before the character they modify (i.e. `U+004A U+006F U+0073 U+0301 U+0065`). **I hope to fix this behavior in a future update.**
+* Combining marks in canonically ordered strings will appear off by one — i.e. `José` is `U+004A U+006F U+0073 U+0065 U+0301`, but this library will display that as `Jose´`. To coax it into displaying the string correctly, you need to include all combining marks before the character they modify (i.e. `U+004A U+006F U+0073 U+0301 U+0065`). **I hope to fix this behavior in a future update.**
 * You currently need to reverse the order of right-to-left scripts like Arabic and Hebrew to get them to display correctly. **In the future I hope to add an RTL mode to the display library.**
-* Arabic appears as isolated letterforms instead of connected script, unless you use a [tool like this](https://github.com/artem-azarov/Arabic-Converter-From-and-To-Arabic-Presentation-Forms-B) to convert it to Arabic Presentation Forms. It might make sense to implement this in the display library.
+* Arabic appears as isolated letterforms instead of connected script, unless you use [a tool like this](https://github.com/artem-azarov/Arabic-Converter-From-and-To-Arabic-Presentation-Forms-B) to convert it to Arabic Presentation Forms. It might make sense to implement this in the display library.
 
 # Original README: Adafruit GFX Library # [![Build Status](https://travis-ci.com/adafruit/Adafruit-GFX-Library.svg?branch=master)](https://travis-ci.org/adafruit/Adafruit-GFX-Library)
 
