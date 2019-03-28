@@ -8,13 +8,26 @@
  #include "WProgram.h"
 #endif
 
-#define UNIFONT_USE_SPI_FLASH
+// NOTE: I only have the Feather M0 Express, M4 Express and PyPortal boards to test with.
+#if defined(ADAFRUIT_FEATHER_M0_EXPRESS) /* UNTESTED: */ || defined(ADAFRUIT_METRO_M0_EXPRESS) || defined(ADAFRUIT_CIRCUITPLAYGROUND_M0) || defined(ADAFRUIT_ITSYBITSY_M0) || defined(ADAFRUIT_HALLOWING)
+ #define UNIFONT_USE_FLASH
+ #define UNIFONT_USE_SPI
+#endif
 
-#ifdef UNIFONT_USE_SPI_FLASH
-  #include <SPI.h>
-  #include <Adafruit_SPIFlash.h>
-  #include <Adafruit_SPIFlash_FatFs.h>
-#endif // UNIFONT_USE_SPI_FLASH
+#if defined(ADAFRUIT_FEATHER_M4_EXPRESS) || defined(ADAFRUIT_PYPORTAL) /* UNTESTED: */ || defined(ADAFRUIT_TRELLIS_M4_EXPRESS) || defined(ADAFRUIT_GRAND_CENTRAL_M4) || defined(ADAFRUIT_ITSYBITSY_M4_EXPRESS) || defined(ADAFRUIT_METRO_M4_EXPRESS)
+ #define UNIFONT_USE_FLASH
+ #define UNIFONT_USE_QSPI
+#endif
+
+#ifdef UNIFONT_USE_FLASH
+ #include <SPI.h>
+ #include <Adafruit_SPIFlash.h>
+ #include <Adafruit_SPIFlash_FatFs.h>
+
+ #ifdef UNIFONT_USE_QSPI
+  #include <Adafruit_QSPI_GD25Q.h>
+ #endif // UNIFONT_USE_QSPI
+#endif // UNIFONT_USE_FLASH
 
 /// A generic graphics superclass that can handle all sorts of drawing. At a minimum you can subclass and provide drawPixel(). At a maximum you can do a ton of overriding to optimize. Used for any/all Adafruit displays!
 class Adafruit_GFX : public Print {
@@ -58,9 +71,9 @@ class Adafruit_GFX : public Print {
 
   // These exist only with Adafruit_GFX (no subclass overrides)
   void
-#ifdef UNIFONT_USE_SPI_FLASH
+#ifdef UNIFONT_USE_FLASH
     loadUnifontFile(),
-#endif // UNIFONT_USE_SPI_FLASH
+#endif // UNIFONT_USE_FLASH
     drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color),
     drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername,
       uint16_t color),
@@ -165,10 +178,10 @@ class Adafruit_GFX : public Print {
     unifileavailable;///< if set, unifont.bin is available on the SPI filesystem
  private:
   inline uint8_t index_for_block(uint8_t block);
-#ifdef UNIFONT_USE_SPI_FLASH
+#ifdef UNIFONT_USE_FLASH
   File
     unifile;        // file handle to unifont.bin, if available
-#endif // UNIFONT_USE_SPI_FLASH
+#endif // UNIFONT_USE_FLASH
 };
 
 
