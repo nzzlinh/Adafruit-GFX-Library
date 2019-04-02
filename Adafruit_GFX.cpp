@@ -1607,11 +1607,19 @@ void Adafruit_GFX::getTextBounds(const __FlashStringHelper *str,
 // and translates it into the index where it can be found.
 inline uint8_t Adafruit_GFX::index_for_block(uint8_t block)
 {
-    if (block < 0xD8)
-        return block;
-    if (block == 0xF9)
-        return 216;
-    return block - 33;
+    if (block <= 0xD7)
+        return block;       // Up to block 0xD7, block and index are the same.
+    if (block >= 0xF9)
+        return block - 33;  // Block 0xF9 appears at index 0xD8, and so on to the end.
+
+    // Blocks from 0xD8 to 0xF8 (inclusive) are invalid:
+    // * Blocks 0xD8 to 0xDF are UTF-16 surrogates.
+    // * Blocks 0xE0 to 0xF8 are private use. Unifont includes some conlangs in here,
+    //   but Klingon feels far enough out of scope that I'm comfortable leaving it out
+    //   for simplicity of implementation.
+    // If an invalid block is passed in, we have to return something, so let's return
+    // the last block, which is full of weird forms anyway.
+    return 0xFF - 33;
 }
 
 
