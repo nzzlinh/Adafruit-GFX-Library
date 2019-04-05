@@ -227,8 +227,8 @@ def generate_unifont_bin():
     # Block Headers
     for block_name in blocks:
         block = blocks[block_name]
+        output.append(block.number) # Unicode block number within plane.
         output.append(0)            # Unicode plane number. This script only handles Plane 0.
-        output.append(block.number) # Block number within plane.
         flags = 0
         if block.has_nonspacing_marks:
             flags |= 1

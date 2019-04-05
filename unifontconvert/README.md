@@ -22,12 +22,14 @@ Each entry in this section is four bytes long and encodes information about the 
 
 | Offset              | Length | Typical Value | Contents |
 |---------------------|--------|---------------|----------|
-| 8                   | 1      | 0x00 or 0x01  | The Unicode plane for the block at this index. The Basic Multilingual Plane is Plane 0; the Supplementary Multilingual Plane is 1. For example, the block "Braille Patterns" (U+2800 - U+28FF) would have 0x00 in this field, whereas the emojis in U+1F300 to U+1F3FF would have 0x01. |
-| 9                   | 1      | 0x00 - 0xFF   | The Unicode block at this index. For example, the block "Braille Patterns" (U+2800 - U+28FF) would have 0x28 in this field. |
+| 8                   | 1      | 0x00 - 0xFF   | The Unicode block at this index. For example, both the block "Arabic" (U+0600 - U+06FF) and the block "Linear A" (U+10600 to U+106FF) would have 0x06 in this field. |
+| 9                   | 1      | 0x00 or 0x01  | The Unicode plane for the block at this index. The Basic Multilingual Plane is Plane 0; the Supplementary Multilingual Plane is Plane 1. There are 17, all told. For our purposes, the block "Arabic" (U+0600 - U+06FF) would have 0x00 in this field since it's block 06 in the BMP, whereas the symbols in "Linear A" (U+10600 to U+106FF) would have 0x01 since it's block 06 in the SMP. |
 | 10                  | 1      | 0b00000???    | Flags specific to this block. See Flags below. |
 | 11                  | 1      | 0             | **Reserved for future use.** This wastes about 223 bytes but leaves plenty of room to expand in the future if need be. |
 | ...                 | ...    | ...           | ... |
 | 8 + (numBlocks * 4) | -      | -             | End of block headers, start of font data. |
+
+Note that the value at offsets 8-9 can be read as a little-endian short.
 
 ### Flags
 
@@ -46,7 +48,7 @@ It is an invalid condition for both of the width flags to be 1 (i.e. 0b00000110)
 
 # The Font Data
 
-The font data. This is simply a concatenation of 256 glyphs per block for each of the blocks, with _numBitmasks_ bitmasks at the end of each. For exclusively single-width blocks, a character is `w\*h/8` bytes long (16 bytes for Unifont). For double- or mixed-width blocks, a character is `w\*h\*multiplier/8` bytes (for Unifont, that's 32).
+This is simply a concatenation of 256 glyphs per block for each of the blocks, with _numBitmasks_ bitmasks at the end of each. For exclusively single-width blocks, a character is `w\*h/8` bytes long (16 bytes for Unifont). For double- or mixed-width blocks, a character is `w\*h\*multiplier/8` bytes (for Unifont, that's 32).
 
 There are always 256 glyphs in a page, giving a page width of 4096 or 8192 for Unifont
 
