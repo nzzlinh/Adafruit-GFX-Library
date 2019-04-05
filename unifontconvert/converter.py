@@ -193,7 +193,7 @@ typedef struct {
             print("\n};\n", file=outfile)
 
     print("\nconst UnifontBlock Unifont[] PROGMEM = {", file=outfile)
-    offset = 0
+    offset = 900
     for block_name in blocks:
         block = blocks[block_name]
         print("    {", end='', file=outfile)
@@ -213,6 +213,33 @@ typedef struct {
 
 def generate_unifont_bin():
     output = bytearray()
+
+    # Global Font Header
+    output.append(0)           # Reserved byte
+    output.append(0)           # Reserved byte
+    output.append(8)           # Glyph width in pixels
+    output.append(16)          # Glyph height in pixels
+    output.append(1)           # Flags. 0b00000001 indicates the presence of double-width glyphs.
+    output.append(2)           # Number of bitmasks per block. We have two.
+    output.append(len(blocks)) # Number of blocks in font, lower byte of two-byte short.
+    output.append(0)           # upper byte of numBlocks
+
+    # Block Headers
+    for block_name in blocks:
+        block = blocks[block_name]
+        output.append(0)            # Unicode plane number. This script only handles Plane 0.
+        output.append(block.number) # Block number within plane.
+        flags = 0
+        if block.has_nonspacing_marks:
+            flags |= 1
+        if block.block_width_mode == 1:
+            flags |= 2
+        elif block.block_width_mode == 2:
+            flags |= 4
+        output.append(flags)        # Flags for this block.
+        output.append(0)            # Reserved for future use.
+
+    # Font Data
     for block_name in blocks:
         block = blocks[block_name]
         for glyph in block.glyphs:
@@ -238,6 +265,7 @@ while 1:
     if command == '1':
         for block_name in blocks:
             print(blocks[block_name])
+        print("\nLoaded data for {} blocks.\n\n".format(len(blocks)))
     elif command == '2':
         toggle_progmem_blocks()
     elif command == '3':
