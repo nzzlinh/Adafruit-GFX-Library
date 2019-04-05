@@ -1175,12 +1175,12 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     {
         if (useProgmem)
         {
-            const uint8_t *widths = (const uint8_t *)Unifont[index].glyphs.location + 8192;
+            const uint8_t *widths = (const uint8_t *)Unifont[index].glyphs.location + 4096 * tableWidth + 32;
             mask = pgm_read_byte(widths + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + charindex / 8);
+            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1197,12 +1197,12 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     {
         if (useProgmem)
         {
-            const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs.location + 4096 * tableWidth + 32;
+            const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs.location + 8192;
             mask = pgm_read_byte(spacings + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
+            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }

@@ -184,12 +184,12 @@ typedef struct {
                 char_num += 1
             if block.has_nonspacing_marks or block.block_width_mode == 0:
                 # we need to include both widths and spacing if either need to be consulted
-                print("    // Character width bitmasks\n    ", end='', file=outfile)
-                for width in block.widths:
-                    print("0x{:02X}".format(width), end=", ", file=outfile)
                 print("\n    // Character spacing bitmasks\n    ", end='', file=outfile)
                 for spacing in block.spacings:
                     print("0x{:02X}".format(spacing), end=", ", file=outfile)
+                print("    // Character width bitmasks\n    ", end='', file=outfile)
+                for width in block.widths:
+                    print("0x{:02X}".format(width), end=", ", file=outfile)
             print("\n};\n", file=outfile)
 
     print("\nconst UnifontBlock Unifont[] PROGMEM = {", file=outfile)
@@ -248,8 +248,8 @@ def generate_unifont_bin():
                 orig_len = len(output)
                 for i in range(0, 16):
                     output += b'\x00'
-        output += bytearray(block.widths)
         output += bytearray(block.spacings)
+        output += bytearray(block.widths)
     outfile = open('unifont.bin', 'wb')
     outfile.write(output)
 
