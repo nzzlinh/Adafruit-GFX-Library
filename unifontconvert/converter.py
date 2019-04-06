@@ -13,14 +13,14 @@ class UnicodeBlock:
         
     def flags(self):
         flags = 0
-        if self.include_in_progmem:
-            flags |= 1
-        if self.is_short_block:
-            flags |= 1 << 1
-        if self.block_width_mode == 2:
-            flags |= 1 << 2
         if self.has_nonspacing_marks:
-            flags |= 1 << 3
+            flags |= 1 << 0
+        if self.block_width_mode == 1:
+            flags |= 1 << 1
+        elif self.block_width_mode == 2:
+            flags |= 1 << 2
+        if self.include_in_progmem:
+            flags |= 1 << 7
         return flags
 
     def __repr__(self):
@@ -133,10 +133,10 @@ def generate_unifont_c():
 
 // GNU Unifont 8x16 font
 
-#define UNIFONT_BLOCK_IN_PROGMEM (1)
+#define UNIFONT_BLOCK_HAS_NON_SPACING_MARKS (1)
 #define UNIFONT_BLOCK_IS_NARROW (1<<1)
 #define UNIFONT_BLOCK_IS_WIDE (1<<2)
-#define UNIFONT_BLOCK_HAS_NON_SPACING_MARKS (1<<3)
+#define UNIFONT_BLOCK_IN_PROGMEM (1<<7)
 
 #define UNIFONT_NARROW_BLOCK_LENGTH (4096)
 #define UNIFONT_WIDE_BLOCK_LENGTH (8192)
@@ -150,15 +150,15 @@ typedef union {
 typedef struct {
        const UnifontLocation glyphs;// If low bit of flags is set, use the location pointer.
                                     // Otherwise, use the offset and look in the unifont.bin file.
-       const uint8_t flags;         // 0b0000xxxx
-                                    //       |||\_ This block is included in PROGMEM
-                                    //       ||\__ This block contains exclusively narrow (16-byte) glyphs
-                                    //       |\___ This block contains exclusively wide (32-byte) glyphs
-                                    //       |     (if both of these are 0, all glyphs are 32 bytes but some are
-                                    //       |      half-width, check width bitmasks after glyph data for advance)
-                                    //       \____ This block contains non-spacing code points
-                                    //             (check spacing data after length data to determine advance)
-
+       const uint8_t flags;         // 0bx0000xxx
+                                    //   |    |||
+                                    //   |    ||\__ This block contains non-spacing code points
+                                    //   |    ||    (check spacing data after length data to determine advance)
+                                    //   |    |\___ This block contains exclusively narrow (16-byte) glyphs
+                                    //   |    \____ This block contains exclusively wide (32-byte) glyphs
+                                    //   |          (if both of these are 0, all glyphs are 32 bytes but some are
+                                    //   |           half-width, check width bitmasks after glyph data for advance)
+                                    //   \_ This block is included in PROGMEM
 } UnifontBlock;
 
 """, file=outfile)
@@ -229,14 +229,7 @@ def generate_unifont_bin():
         block = blocks[block_name]
         output.append(block.number) # Unicode block number within plane.
         output.append(0)            # Unicode plane number. This script only handles Plane 0.
-        flags = 0
-        if block.has_nonspacing_marks:
-            flags |= 1
-        if block.block_width_mode == 1:
-            flags |= 2
-        elif block.block_width_mode == 2:
-            flags |= 4
-        output.append(flags)        # Flags for this block.
+        output.append(block.flags() & 0x7F)  # Flags for this block. Zero out high bit.
         output.append(0)            # Reserved for future use.
 
     # Font Data

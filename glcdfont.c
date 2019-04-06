@@ -14,10 +14,10 @@
 
 // GNU Unifont 8x16 font
 
-#define UNIFONT_BLOCK_IN_PROGMEM (1)
+#define UNIFONT_BLOCK_HAS_NON_SPACING_MARKS (1)
 #define UNIFONT_BLOCK_IS_NARROW (1<<1)
 #define UNIFONT_BLOCK_IS_WIDE (1<<2)
-#define UNIFONT_BLOCK_HAS_NON_SPACING_MARKS (1<<3)
+#define UNIFONT_BLOCK_IN_PROGMEM (1<<7)
 
 #define UNIFONT_NARROW_BLOCK_LENGTH (4096)
 #define UNIFONT_WIDE_BLOCK_LENGTH (8192)
@@ -31,15 +31,15 @@ typedef union {
 typedef struct {
        const UnifontLocation glyphs;// If low bit of flags is set, use the location pointer.
                                     // Otherwise, use the offset and look in the unifont.bin file.
-       const uint8_t flags;         // 0b0000xxxx
-                                    //       |||\_ This block is included in PROGMEM
-                                    //       ||\__ This block contains exclusively narrow (16-byte) glyphs
-                                    //       |\___ This block contains exclusively wide (32-byte) glyphs
-                                    //       |     (if both of these are 0, all glyphs are 32 bytes but some are
-                                    //       |      half-width, check width bitmasks after glyph data for advance)
-                                    //       \____ This block contains non-spacing code points
-                                    //             (check spacing data after length data to determine advance)
-
+       const uint8_t flags;         // 0bx0000xxx
+                                    //   |    |||
+                                    //   |    ||\__ This block contains non-spacing code points
+                                    //   |    ||    (check spacing data after length data to determine advance)
+                                    //   |    |\___ This block contains exclusively narrow (16-byte) glyphs
+                                    //   |    \____ This block contains exclusively wide (32-byte) glyphs
+                                    //   |          (if both of these are 0, all glyphs are 32 bytes but some are
+                                    //   |           half-width, check width bitmasks after glyph data for advance)
+                                    //   \_ This block is included in PROGMEM
 } UnifontBlock;
 
 
@@ -273,39 +273,39 @@ static const uint8_t block_00_data[] PROGMEM = {
 
 
 const UnifontBlock Unifont[] PROGMEM = {
-    {block_00_data, 0b00000011}, // Block 00
+    {block_00_data, 0b10000010}, // Block 00
     {(const unsigned char*)5060, 0b00000010}, // Block 01
     {(const unsigned char*)9220, 0b00000010}, // Block 02
-    {(const unsigned char*)13380, 0b00001000}, // Block 03
-    {(const unsigned char*)21636, 0b00001000}, // Block 04
-    {(const unsigned char*)29892, 0b00001000}, // Block 05
-    {(const unsigned char*)38148, 0b00001000}, // Block 06
-    {(const unsigned char*)46404, 0b00001000}, // Block 07
-    {(const unsigned char*)54660, 0b00001000}, // Block 08
-    {(const unsigned char*)62916, 0b00001100}, // Block 09
-    {(const unsigned char*)71172, 0b00001100}, // Block 0A
-    {(const unsigned char*)79428, 0b00001100}, // Block 0B
-    {(const unsigned char*)87684, 0b00001100}, // Block 0C
-    {(const unsigned char*)95940, 0b00001100}, // Block 0D
-    {(const unsigned char*)104196, 0b00001000}, // Block 0E
-    {(const unsigned char*)112452, 0b00001000}, // Block 0F
-    {(const unsigned char*)120708, 0b00001000}, // Block 10
+    {(const unsigned char*)13380, 0b00000001}, // Block 03
+    {(const unsigned char*)21636, 0b00000001}, // Block 04
+    {(const unsigned char*)29892, 0b00000001}, // Block 05
+    {(const unsigned char*)38148, 0b00000001}, // Block 06
+    {(const unsigned char*)46404, 0b00000001}, // Block 07
+    {(const unsigned char*)54660, 0b00000001}, // Block 08
+    {(const unsigned char*)62916, 0b00000101}, // Block 09
+    {(const unsigned char*)71172, 0b00000101}, // Block 0A
+    {(const unsigned char*)79428, 0b00000101}, // Block 0B
+    {(const unsigned char*)87684, 0b00000101}, // Block 0C
+    {(const unsigned char*)95940, 0b00000101}, // Block 0D
+    {(const unsigned char*)104196, 0b00000001}, // Block 0E
+    {(const unsigned char*)112452, 0b00000001}, // Block 0F
+    {(const unsigned char*)120708, 0b00000001}, // Block 10
     {(const unsigned char*)128964, 0b00000100}, // Block 11
     {(const unsigned char*)137220, 0b00000100}, // Block 12
-    {(const unsigned char*)145476, 0b00001000}, // Block 13
+    {(const unsigned char*)145476, 0b00000001}, // Block 13
     {(const unsigned char*)153732, 0b00000000}, // Block 14
     {(const unsigned char*)161988, 0b00000000}, // Block 15
     {(const unsigned char*)170244, 0b00000000}, // Block 16
-    {(const unsigned char*)178500, 0b00001000}, // Block 17
-    {(const unsigned char*)186756, 0b00001000}, // Block 18
-    {(const unsigned char*)195012, 0b00001000}, // Block 19
-    {(const unsigned char*)203268, 0b00001000}, // Block 1A
-    {(const unsigned char*)211524, 0b00001100}, // Block 1B
-    {(const unsigned char*)219780, 0b00001000}, // Block 1C
-    {(const unsigned char*)228036, 0b00001000}, // Block 1D
+    {(const unsigned char*)178500, 0b00000001}, // Block 17
+    {(const unsigned char*)186756, 0b00000001}, // Block 18
+    {(const unsigned char*)195012, 0b00000001}, // Block 19
+    {(const unsigned char*)203268, 0b00000001}, // Block 1A
+    {(const unsigned char*)211524, 0b00000101}, // Block 1B
+    {(const unsigned char*)219780, 0b00000001}, // Block 1C
+    {(const unsigned char*)228036, 0b00000001}, // Block 1D
     {(const unsigned char*)236292, 0b00000010}, // Block 1E
     {(const unsigned char*)240452, 0b00000010}, // Block 1F
-    {(const unsigned char*)244612, 0b00001000}, // Block 20
+    {(const unsigned char*)244612, 0b00000001}, // Block 20
     {(const unsigned char*)252868, 0b00000000}, // Block 21
     {(const unsigned char*)261124, 0b00000000}, // Block 22
     {(const unsigned char*)269380, 0b00000000}, // Block 23
@@ -317,11 +317,11 @@ const UnifontBlock Unifont[] PROGMEM = {
     {(const unsigned char*)314820, 0b00000000}, // Block 29
     {(const unsigned char*)323076, 0b00000000}, // Block 2A
     {(const unsigned char*)331332, 0b00000000}, // Block 2B
-    {(const unsigned char*)339588, 0b00001000}, // Block 2C
-    {(const unsigned char*)347844, 0b00001000}, // Block 2D
+    {(const unsigned char*)339588, 0b00000001}, // Block 2C
+    {(const unsigned char*)347844, 0b00000001}, // Block 2D
     {(const unsigned char*)356100, 0b00000000}, // Block 2E
     {(const unsigned char*)364356, 0b00000100}, // Block 2F
-    {(const unsigned char*)372612, 0b00001000}, // Block 30
+    {(const unsigned char*)372612, 0b00000001}, // Block 30
     {(const unsigned char*)380868, 0b00000100}, // Block 31
     {(const unsigned char*)389124, 0b00000100}, // Block 32
     {(const unsigned char*)397380, 0b00000100}, // Block 33
@@ -439,12 +439,12 @@ const UnifontBlock Unifont[] PROGMEM = {
     {(const unsigned char*)1322052, 0b00000100}, // Block A3
     {(const unsigned char*)1330308, 0b00000000}, // Block A4
     {(const unsigned char*)1338564, 0b00000100}, // Block A5
-    {(const unsigned char*)1346820, 0b00001000}, // Block A6
+    {(const unsigned char*)1346820, 0b00000001}, // Block A6
     {(const unsigned char*)1355076, 0b00000000}, // Block A7
-    {(const unsigned char*)1363332, 0b00001000}, // Block A8
-    {(const unsigned char*)1371588, 0b00001100}, // Block A9
-    {(const unsigned char*)1379844, 0b00001100}, // Block AA
-    {(const unsigned char*)1388100, 0b00001000}, // Block AB
+    {(const unsigned char*)1363332, 0b00000001}, // Block A8
+    {(const unsigned char*)1371588, 0b00000101}, // Block A9
+    {(const unsigned char*)1379844, 0b00000101}, // Block AA
+    {(const unsigned char*)1388100, 0b00000001}, // Block AB
     {(const unsigned char*)1396356, 0b00000100}, // Block AC
     {(const unsigned char*)1404612, 0b00000100}, // Block AD
     {(const unsigned char*)1412868, 0b00000100}, // Block AE
@@ -491,10 +491,10 @@ const UnifontBlock Unifont[] PROGMEM = {
     {(const unsigned char*)1751364, 0b00000100}, // Block D7
     {(const unsigned char*)1759620, 0b00000100}, // Block F9
     {(const unsigned char*)1767876, 0b00000100}, // Block FA
-    {(const unsigned char*)1776132, 0b00001000}, // Block FB
+    {(const unsigned char*)1776132, 0b00000001}, // Block FB
     {(const unsigned char*)1784388, 0b00000000}, // Block FC
     {(const unsigned char*)1792644, 0b00000000}, // Block FD
-    {(const unsigned char*)1800900, 0b00001000}, // Block FE
+    {(const unsigned char*)1800900, 0b00000001}, // Block FE
     {(const unsigned char*)1809156, 0b00000000}, // Block FF
 };
 
