@@ -118,7 +118,6 @@ class Adafruit_GFX : public Print {
       uint16_t *bitmap, uint8_t *mask, int16_t w, int16_t h),
     drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color,
       uint16_t bg, uint8_t size),
-    writeCodepoint(uint16_t c),
     setCursor(int16_t x, int16_t y),
     setTextColor(uint16_t c),
     setTextColor(uint16_t c, uint16_t bg),
@@ -136,6 +135,7 @@ class Adafruit_GFX : public Print {
       uint16_t bg, uint8_t size);
 
   size_t
+    writeCodepoint(uint16_t c),
     printUTF8(char *string),
     printlnUTF8(char *string);
 

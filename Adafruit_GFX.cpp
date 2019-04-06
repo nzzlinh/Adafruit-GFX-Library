@@ -1302,7 +1302,7 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     @param  c  The 16-bit unicode codepoint to write
 */
 /**************************************************************************/
-void Adafruit_GFX::writeCodepoint(uint16_t c) {
+size_t Adafruit_GFX::writeCodepoint(uint16_t c) {
     if(c == '\n') {                        // Newline?
         cursor_x  = 0;                     // Reset x to zero,
         cursor_y += textsize * 16;          // advance y one line
@@ -1314,6 +1314,7 @@ void Adafruit_GFX::writeCodepoint(uint16_t c) {
         int advance = drawCodepoint(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
         cursor_x += textsize * advance;    // Advance x one char
     }
+    return 1;
 }
 
 
@@ -1392,18 +1393,7 @@ void Adafruit_GFX::fix_diacritics(uint16_t *s, size_t length)
 */
 /**************************************************************************/
 size_t Adafruit_GFX::write(uint8_t c) {
-    if(c == '\n') {                        // Newline?
-        cursor_x  = 0;                     // Reset x to zero,
-        cursor_y += textsize * 16;          // advance y one line
-    } else if(c != '\r') {                 // Ignore carriage returns
-        if(wrap && ((cursor_x + textsize * 8) > _width)) { // Off right?
-            cursor_x  = 0;                 // Reset x to zero,
-            cursor_y += textsize * 16;      // advance y one line
-        }
-        drawChar(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
-        cursor_x += textsize * 8;          // Advance x one char
-    }
-    return 1;
+    return writeCodepoint(c);
 }
 
 /**************************************************************************/
