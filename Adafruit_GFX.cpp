@@ -108,6 +108,7 @@ WIDTH(w), HEIGHT(h)
     rotation  = 0;
     cursor_y  = cursor_x    = 0;
     textsize  = 1;
+    direction = 1;
     textcolor = textbgcolor = 0xFFFF;
     wrap      = true;
     unifileavailable = false;
@@ -1298,21 +1299,23 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 }
 /**************************************************************************/
 /*!
-    @brief  Print one byte/character of data, used to support print()
+    @brief  Print one short/codepoint of data, used to support printUTF8()
     @param  c  The 16-bit unicode codepoint to write
 */
 /**************************************************************************/
 size_t Adafruit_GFX::writeCodepoint(uint16_t c) {
+    // FIXME: RTL start of line and wrap check do not account for double-width glyphs or non spacing marks.
     if(c == '\n') {                        // Newline?
-        cursor_x  = 0;                     // Reset x to zero,
+        cursor_x = (direction == 1) ? 0 : (_width - textsize * 8); // Reset x to start of line
         cursor_y += textsize * 16;          // advance y one line
     } else if(c != '\r') {                 // Ignore carriage returns
-        if(wrap && ((cursor_x + textsize * 8) > _width)) { // Off right?
-            cursor_x  = 0;                 // Reset x to zero,
-            cursor_y += textsize * 16;      // advance y one line
+        int xPos = (cursor_x + textsize * 8 * direction);
+        if(wrap && (xPos > _width || xPos < textsize * -8)) { // Off right or left?
+            cursor_x = (direction == 1) ? 0 : (_width - textsize * 8); // Reset x to start of line
+            cursor_y += textsize * 16;            // advance y one line
         }
         int advance = drawCodepoint(cursor_x, cursor_y, c, textcolor, textbgcolor, textsize);
-        cursor_x += textsize * advance;    // Advance x one char
+        cursor_x += textsize * advance * direction;    // Advance x one char
     }
     return 1;
 }
@@ -1472,6 +1475,22 @@ void Adafruit_GFX::setTextWrap(boolean w) {
     wrap = w;
 }
 
+/**************************************************************************/
+/*!
+    @brief Moves between LTR and RTL mode. Advances to a new line when changed.
+    @param  r True if text should be drawn RTL, false for LTR.
+*/
+/**************************************************************************/
+void Adafruit_GFX::setRTL(boolean r)
+{
+    uint8_t newDirection = r ? -1 : 1;
+    if (direction != newDirection)
+    {
+        direction = newDirection;
+        if (cursor_y != 0) cursor_y += textsize * 16; // if there is text on this line, move to next line.
+        cursor_x = (direction == 1) ? 0 : (_width - textsize * 8); // Reset x to start of line
+    }
+}
 /**************************************************************************/
 /*!
     @brief      Get rotation setting for display

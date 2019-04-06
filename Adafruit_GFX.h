@@ -123,6 +123,7 @@ class Adafruit_GFX : public Print {
     setTextColor(uint16_t c, uint16_t bg),
     setTextSize(uint8_t s),
     setTextWrap(boolean w),
+    setRTL(boolean r),
     cp437(boolean x=true),
     getTextBounds(const char *string, int16_t x, int16_t y,
       int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h),
@@ -173,6 +174,7 @@ class Adafruit_GFX : public Print {
   uint8_t
     textsize,       ///< Desired magnification of text to print()
     rotation;       ///< Display rotation (0 thru 3)
+  int8_t direction; ///< 1 for LTR, -1 for RTL.
   boolean
     wrap,           ///< If set, 'wrap' text at right edge of display
     unifileavailable;///< if set, unifont.bin is available on the SPI filesystem
