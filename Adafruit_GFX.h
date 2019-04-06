@@ -1,6 +1,8 @@
 #ifndef _ADAFRUIT_GFX_H
 #define _ADAFRUIT_GFX_H
 
+#include "glcdfont.h"
+
 #if ARDUINO >= 100
  #include "Arduino.h"
  #include "Print.h"
@@ -178,6 +180,7 @@ class Adafruit_GFX : public Print {
   boolean
     wrap,           ///< If set, 'wrap' text at right edge of display
     unifileavailable;///< if set, unifont.bin is available on the SPI filesystem
+  UnifontBlock *unifont;
  private:
   inline uint8_t index_for_block(uint8_t block);
   void fix_diacritics(uint16_t *s, size_t length);

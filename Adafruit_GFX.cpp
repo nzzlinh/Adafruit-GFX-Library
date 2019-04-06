@@ -112,6 +112,12 @@ WIDTH(w), HEIGHT(h)
     textcolor = textbgcolor = 0xFFFF;
     wrap      = true;
     unifileavailable = false;
+    unifont = (UnifontBlock*)malloc(256 * sizeof(UnifontBlock));
+    memset(unifont, 0, 256 * sizeof(UnifontBlock));
+    for (int i = 0; i < (sizeof(BlocksInProgmem)/sizeof(*BlocksInProgmem)); i++)
+    {
+        unifont[BlocksInProgmem[i].blockNumber] = BlocksInProgmem[i].blockData;
+    }
 }
 
 /**************************************************************************/
@@ -140,7 +146,40 @@ void Adafruit_GFX::loadUnifontFile()
     {
         unifile = pythonfs.open("unifont.bin", FILE_READ);
         if (unifile)
+        {
             unifileavailable = true;
+            // For format details: https://github.com/joeycastillo/Adafruit-GFX-Library/blob/master/unifontconvert/README.md
+            unifile.seek(2);
+            uint8_t w = unifile.read();
+            uint8_t h = unifile.read();
+            uint8_t multiplier = (unifile.read() & 1) ? 2 : 1; // we only care about one flag.
+            uint8_t numBitmasks = unifile.read();
+            uint16_t numBlocks;
+            unifile.read(&numBlocks, 2);
+
+            int offset = 8 + (numBlocks * 4);
+            for(uint16_t i = 0; i < numBlocks; i++)
+            {
+                uint8_t blockNum = unifile.read();
+                unifile.read(); // plane number, ignored
+                uint8_t flags = unifile.read();
+                unifile.read(); // free byte, ignored.
+
+                if (unifont[i].glyphs.offset == 0)
+                {
+                    unifont[blockNum].glyphs.offset = offset;
+                    unifont[blockNum].flags = flags;
+                }
+
+                if (flags & UNIFONT_BLOCK_IS_NARROW)
+                {
+                    offset += 256 * w * h / 8 + 32 * numBitmasks;
+                } else
+                {
+                    offset += 256 * w * h * multiplier / 8 + 32 * numBitmasks;
+                }
+            }
+        }
     }
 }
 #endif // UNIFONT_USE_FLASH
@@ -1094,7 +1133,7 @@ void Adafruit_GFX::drawChar(int16_t x, int16_t y, unsigned char c,
         return;
 
     startWrite();
-    const unsigned char* font = Unifont[0].glyphs.location;
+    const unsigned char* font = unifont[0].glyphs.location;
     for(int8_t i=0; i<16; i++ ) {
         uint8_t line = pgm_read_byte(&font[(c - 0x20) * 16 + i]);
         for(int8_t j=7; j>= 0; j--, line >>= 1) {
@@ -1144,7 +1183,7 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     uint8_t charindex = c & 0x00FF;
 
     bool useProgmem;
-    if (Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+    if (unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
         useProgmem = true;
     else if (unifileavailable)
         useProgmem = false;
@@ -1153,11 +1192,11 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 
     uint8_t tableWidth;
     uint8_t characterWidth;
-    if (Unifont[index].flags & UNIFONT_BLOCK_IS_NARROW)
+    if (unifont[index].flags & UNIFONT_BLOCK_IS_NARROW)
     {
         tableWidth = 1;
         characterWidth = 1;
-    } else if (Unifont[index].flags & UNIFONT_BLOCK_IS_WIDE)
+    } else if (unifont[index].flags & UNIFONT_BLOCK_IS_WIDE)
     {
         tableWidth = 2;
         characterWidth = 2;
@@ -1176,12 +1215,12 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     {
         if (useProgmem)
         {
-            const uint8_t *widths = (const uint8_t *)Unifont[index].glyphs.location + 4096 * tableWidth + 32;
+            const uint8_t *widths = (const uint8_t *)unifont[index].glyphs.location + 4096 * tableWidth + 32;
             mask = pgm_read_byte(widths + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
+            unifile.seek((uint32_t)unifont[index].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1194,16 +1233,16 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 
     // next determine spacing mode
     bool shouldAdvance;
-    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
+    if (unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
     {
         if (useProgmem)
         {
-            const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs.location + 8192;
+            const uint8_t *spacings = (const uint8_t *)unifont[index].glyphs.location + 8192;
             mask = pgm_read_byte(spacings + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)Unifont[index].glyphs.offset + widthOffset + charindex / 8);
+            unifile.seek((uint32_t)unifont[index].glyphs.offset + widthOffset + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1224,13 +1263,13 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
         const int16_t start = block == 0 ? 0x20 : 0;
         if (charindex - start < 0) return 0;
         for(int8_t i=0; i<characterWidth*16; i++ )
-            glyph[i] = pgm_read_byte(&Unifont[index].glyphs.location[(charindex - start) * 16 * tableWidth + i]);
+            glyph[i] = pgm_read_byte(&unifont[index].glyphs.location[(charindex - start) * 16 * tableWidth + i]);
     }
     else
     {
         #ifdef UNIFONT_USE_FLASH
         uint32_t charOffset = 16 * tableWidth * charindex;
-        unifile.seek((uint32_t)Unifont[index].glyphs.offset + charOffset);
+        unifile.seek((uint32_t)unifont[index].glyphs.offset + charOffset);
         unifile.read(&glyph, characterWidth*16);
         #endif // UNIFONT_USE_FLASH
     }
@@ -1363,18 +1402,18 @@ void Adafruit_GFX::fix_diacritics(uint16_t *s, size_t length)
     uint8_t charindex = s[i + 1] & 0xFF;
 
     // If its block does not have non spacing marks, we don't need to do anything.
-    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
+    if (unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
     {
         // If it does, we need to check.
         uint8_t mask = 0xFF;
-        if (Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+        if (unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
         {
-            const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs.location + 8192;
+            const uint8_t *spacings = (const uint8_t *)unifont[index].glyphs.location + 8192;
             mask = pgm_read_byte(spacings + charindex / 8);
         } else if (unifileavailable)
         {
             #ifdef UNIFONT_USE_FLASH
-              unifile.seek((uint32_t)Unifont[index].glyphs.offset + 8192 + charindex / 8);
+              unifile.seek((uint32_t)unifont[index].glyphs.offset + 8192 + charindex / 8);
               mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }

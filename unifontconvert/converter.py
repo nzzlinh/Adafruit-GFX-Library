@@ -117,8 +117,10 @@ def toggle_progmem_blocks():
 
 def generate_unifont_c():
     outfile = open('glcdfont.c', 'w')
-    print("""#ifndef FONT8x16_H
-#define FONT8x16_H
+    print("""#ifndef FONT8x16_C
+#define FONT8x16_C
+
+#include "glcdfont.h"
 
 #ifdef __AVR__
  #include <avr/io.h>
@@ -132,35 +134,6 @@ def generate_unifont_c():
 #include <stdint.h>
 
 // GNU Unifont 8x16 font
-
-#define UNIFONT_BLOCK_HAS_NON_SPACING_MARKS (1)
-#define UNIFONT_BLOCK_IS_NARROW (1<<1)
-#define UNIFONT_BLOCK_IS_WIDE (1<<2)
-#define UNIFONT_BLOCK_IN_PROGMEM (1<<7)
-
-#define UNIFONT_NARROW_BLOCK_LENGTH (4096)
-#define UNIFONT_WIDE_BLOCK_LENGTH (8192)
-#define UNIFONT_BITMASK_LENGTH (32)
-
-typedef union {
-    const uint8_t* location;
-    const int32_t offset;
-} UnifontLocation;
-
-typedef struct {
-       const UnifontLocation glyphs;// If low bit of flags is set, use the location pointer.
-                                    // Otherwise, use the offset and look in the unifont.bin file.
-       const uint8_t flags;         // 0bx0000xxx
-                                    //   |    |||
-                                    //   |    ||\__ This block contains non-spacing code points
-                                    //   |    ||    (check spacing data after length data to determine advance)
-                                    //   |    |\___ This block contains exclusively narrow (16-byte) glyphs
-                                    //   |    \____ This block contains exclusively wide (32-byte) glyphs
-                                    //   |          (if both of these are 0, all glyphs are 32 bytes but some are
-                                    //   |           half-width, check width bitmasks after glyph data for advance)
-                                    //   \_ This block is included in PROGMEM
-} UnifontBlock;
-
 """, file=outfile)
     for block_name in blocks:
         block = blocks[block_name]
@@ -192,23 +165,20 @@ typedef struct {
                     print("0x{:02X}".format(width), end=", ", file=outfile)
             print("\n};\n", file=outfile)
 
-    print("\nconst UnifontBlock Unifont[] PROGMEM = {", file=outfile)
-    offset = 900
+    print("const UnifontInclusion BlocksInProgmem[] = {", file=outfile)
+
     for block_name in blocks:
         block = blocks[block_name]
-        print("    {", end='', file=outfile)
         if block.include_in_progmem:
-            print("block_{}_data, ".format(block_name), end='', file=outfile)
-        else:
-            print("(const unsigned char*){}, ".format(offset), end='', file=outfile)
-        print("{:#010b}}},".format(block.flags()), end='', file=outfile)
-        print(" // Block {}".format(block_name), file=outfile)
-        if block.is_short_block:
-            offset += 4096 + 64
-        else:
-            offset += 8192 + 64
+            print("    {0x", end='', file=outfile)
+            print("{}".format(block_name), end='', file=outfile)
+            print(", {block_", end='', file=outfile)
+            print("{}".format(block_name), end='', file=outfile)
+            print("_data, ", end='', file=outfile)
+            print("{:#010b}}}".format(block.flags()), end='', file=outfile)
+            print("},", file=outfile)
     print("};", file=outfile)
-    print("\n#endif // FONT8x16_H", file=outfile)
+    print("\n#endif // FONT8x16_C", file=outfile)
 
 
 def generate_unifont_bin():
@@ -267,4 +237,3 @@ while 1:
         generate_unifont_bin()
     elif command.upper() == 'Q':
         exit(0)
-
