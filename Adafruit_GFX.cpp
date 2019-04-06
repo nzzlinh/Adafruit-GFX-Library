@@ -1193,7 +1193,7 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 
     // next determine spacing mode
     bool shouldAdvance;
-    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_CUSTOM_SPACING)
+    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
     {
         if (useProgmem)
         {
@@ -1324,18 +1324,66 @@ size_t Adafruit_GFX::printlnUTF8(char *string) {
 }
 
 size_t Adafruit_GFX::printUTF8(char *string) {
-    size_t retVal = 0;
+    size_t len = 0;
+    uint16_t *codepointsToPrint = (uint16_t *)malloc(strlen(string) * 2);
+
     utf8_decode_init(string, strlen(string));
-    do {
+    do
+    {
         int c = utf8_decode_next();
-        if (c == UTF8_END || c == UTF8_ERROR)
-            return retVal;
-        writeCodepoint(c);
+        if (c == UTF8_END || c == UTF8_ERROR) break;
+        codepointsToPrint[len++] = (uint16_t)c;
     } while (1);
+
+    fix_diacritics(codepointsToPrint, len);
+    for (size_t i = 0; i < len; i++) writeCodepoint(codepointsToPrint[i]);
+
+    free(codepointsToPrint);
+    return len;
 }
 
+/**************************************************************************/
+/*!
+    @brief  Swaps all non-spacing marks to the position before the nearest spacing mark. This causes combining marks to be drawn first, so the character they modify can be drawn on top.
+    @param  s       inout, an array of codepoints to be modified in place.
+    @param  length  The number of codepoints in s.
+    @note   This method is not idempotent! You must call it only once on any given string, since it will modify it in place.
+*/
+/**************************************************************************/
+void Adafruit_GFX::fix_diacritics(uint16_t *s, size_t length)
+{
+  for (size_t i = 0; i < length - 1; i++)
+  {
+    // Note: we are checking to see if the character AFTER this one is a non-spacing mark.
+    uint8_t index = index_for_block(s[i + 1] >> 8);
+    uint8_t charindex = s[i + 1] & 0xFF;
 
-
+    // If its block does not have non spacing marks, we don't need to do anything.
+    if (Unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
+    {
+        // If it does, we need to check.
+        uint8_t mask = 0xFF;
+        if (Unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+        {
+            const uint8_t *spacings = (const uint8_t *)Unifont[index].glyphs.location + 8192;
+            mask = pgm_read_byte(spacings + charindex / 8);
+        } else if (unifileavailable)
+        {
+            #ifdef UNIFONT_USE_FLASH
+              unifile.seek((uint32_t)Unifont[index].glyphs.offset + 8192 + charindex / 8);
+              mask = unifile.read();
+            #endif // UNIFONT_USE_FLASH
+        }
+        // If the character at i+1 is non-spacing, swap it with the current character.
+        if ((mask & (1 << (7 - charindex % 8))) == 0)
+        {
+            uint16_t tmp = s[i + 1];
+            s[i + 1] = s[i];
+            s[i] = tmp;
+        }
+    }
+  }
+}
 
 /**************************************************************************/
 /*!

@@ -178,6 +178,7 @@ class Adafruit_GFX : public Print {
     unifileavailable;///< if set, unifont.bin is available on the SPI filesystem
  private:
   inline uint8_t index_for_block(uint8_t block);
+  void fix_diacritics(uint16_t *s, size_t length);
 #ifdef UNIFONT_USE_FLASH
   File
     unifile;        // file handle to unifont.bin, if available

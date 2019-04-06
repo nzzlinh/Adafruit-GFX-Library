@@ -48,7 +48,7 @@ Note that if you are not using the unifont.bin file, AND you are on one of the E
 
 There are some edge cases that I hope to address eventually. These are the edge cases, and the current workarounds (which I fully intend to break once I fix the underlying behavior).
 
-* Combining marks in canonically ordered strings will appear off by one — i.e. `José` is `U+004A U+006F U+0073 U+0065 U+0301`, but this library will display that as `Jose´`. To coax it into displaying the string correctly, you need to include all combining marks before the character they modify (i.e. `U+004A U+006F U+0073 U+0301 U+0065`). **I hope to fix this behavior in a future update.**
+* ~~Accents and diacritics in canonically ordered strings will appear off by one~~ **FIXED!** The printUTF8 method now draws combining marks first, and then the character they modify on top. Note that these marks won't be visible if you set a background color, since writing the character background overwrites anything that was there before.
 * You currently need to reverse the order of right-to-left scripts like Arabic and Hebrew to get them to display correctly. **In the future I hope to add an RTL mode to the display library.**
 * Arabic appears as isolated letterforms instead of connected script, unless you use [a tool like this](https://github.com/artem-azarov/Arabic-Converter-From-and-To-Arabic-Presentation-Forms-B) to convert it to Arabic Presentation Forms. It might make sense to implement this in the display library.
 
