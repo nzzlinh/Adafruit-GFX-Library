@@ -188,7 +188,14 @@ def generate_unifont_c():
                 print(" // Code point {}{:02X}".format(block_name, char_num), file=outfile)
                 char_num += 1
             if block.number == 0:
-                pass
+                # special case for block 0: since we only need to consult one bitmask and
+                # only for codepoints 0041-00FF, this only emits the bits we need and we
+                # handle it as a special case in the library.
+                print("\n    // LTR bitmasks, starting at U+0040. Block 0 is a special case; since it does not have any double-wide glyphs,", end='', file=outfile)
+                print("\n    // nonspacing marks or RTL characters, we omit those here and treat it differently in code.", end='', file=outfile)
+                print("\n    // Note that in unifont.bin, all bitmasks still appear, and this one begins at character 00 like all the others.", file=outfile)
+                for byte in block.ltr[8:]:
+                    print("0x{:02X}".format(byte), end=", ", file=outfile)
             elif block.has_nonspacing_marks or block.block_width_mode == 0 or block.has_direction_changes:
                 # we need to include all bitmasks if any need to be consulted
                 print("\n    // Character spacing bitmasks\n    ", end='', file=outfile)
