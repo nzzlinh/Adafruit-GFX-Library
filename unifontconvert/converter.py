@@ -5,6 +5,7 @@ class CodepointInfo:
         self.isNSM  = False
         self.isRTL  = False
         self.isLTR  = False
+        self.isMirrored = False
 
 class UnicodeBlock:
     def __init__(self, block_number):
@@ -15,10 +16,12 @@ class UnicodeBlock:
         self.block_width_mode = None
         self.has_nonspacing_marks = False
         self.has_direction_changes = False
+        self.has_mirroring = False
         self.spacings = [0] * 32
         self.rtl = [0] * 32
         self.ltr = [0] * 32
         self.widths = [0] * 32
+        self.mirroring = [0] * 32
         
     def flags(self):
         flags = 0
@@ -30,12 +33,14 @@ class UnicodeBlock:
             flags |= 1 << 2
         if self.has_direction_changes:
             flags |= 1 << 3
+        if self.has_mirroring:
+            flags |= 1 << 4
         if self.include_in_progmem:
             flags |= 1 << 7
         return flags
 
     def __repr__(self):
-        return "\nBlock {}: {} {} glyphs with width mode {}\nWidth:   {}\nSpacing: {}\nLTR    : {}\nRTL    : {}".format(hex(self.number)[2:].upper(), bin(self.flags()), len(self.glyphs), self.block_width_mode, binascii.hexlify(bytearray(self.widths)), binascii.hexlify(bytearray(self.spacings)), binascii.hexlify(bytearray(self.ltr)), binascii.hexlify(bytearray(self.rtl)))
+        return "\nBlock {}: {} {} glyphs with width mode {}\nWidth:   {}\nSpacing: {}\nLTR    : {}\nRTL    : {}\nMirror : {}".format(hex(self.number)[2:].upper(), bin(self.flags()), len(self.glyphs), self.block_width_mode, binascii.hexlify(bytearray(self.widths)), binascii.hexlify(bytearray(self.spacings)), binascii.hexlify(bytearray(self.ltr)), binascii.hexlify(bytearray(self.rtl)), binascii.hexlify(bytearray(self.mirroring)))
 
 
 short_blocks = ["00", "01", "02", "1E", "1F", "28"]
@@ -53,10 +58,12 @@ for line in open('UnicodeData.txt', 'r'):
     codepoint = line[0]
     general_category = line[2]
     bidi_class = line[4]
+    bidi_mirrored = line[9]
     info = CodepointInfo()
     info.isNSM = general_category in ["Mn", "Mc", "Me"] or bidi_class == "NSM"
     info.isLTR = bidi_class in ["L", "LRE", "LRO", "LRI"]
     info.isRTL = bidi_class in ["R", "AL", "RLE", "RLO", "RLI"]
+    info.isMirrored = bidi_mirrored == "Y"
     bidi_info[codepoint] = info
 
 for line in open('unifont.hex', 'r'):
@@ -117,6 +124,11 @@ for line in open('unifont.hex', 'r'):
     if codepoint in bidi_info and bidi_info[codepoint].isLTR:
         current_block.has_direction_changes = True
         current_block.ltr[char_num // 8] |= 1 << (7 - char_num % 8)
+
+    if codepoint in bidi_info and bidi_info[codepoint].isMirrored:
+        current_block.has_mirroring = True
+        current_block.mirroring[char_num // 8] |= 1 << (7 - char_num % 8)
+
 
 # block FF needs two more glyphs to make all the tables the same length.
 current_block.glyphs.append(bytearray(b'\xff') * 32)
@@ -196,7 +208,7 @@ def generate_unifont_c():
                 print("\n    // Note that in unifont.bin, all bitmasks still appear, and this one begins at character 00 like all the others.", file=outfile)
                 for byte in block.ltr[8:]:
                     print("0x{:02X}".format(byte), end=", ", file=outfile)
-            elif block.has_nonspacing_marks or block.block_width_mode == 0 or block.has_direction_changes:
+            elif block.has_nonspacing_marks or block.block_width_mode == 0 or block.has_direction_changes or block.has_mirroring:
                 # we need to include all bitmasks if any need to be consulted
                 print("\n    // Character spacing bitmasks\n    ", end='', file=outfile)
                 for byte in block.spacings:
@@ -209,6 +221,9 @@ def generate_unifont_c():
                     print("0x{:02X}".format(byte), end=", ", file=outfile)
                 print("\n    // RTL bitmasks\n    ", end='', file=outfile)
                 for byte in block.rtl:
+                    print("0x{:02X}".format(byte), end=", ", file=outfile)
+                print("\n    // RTL Mirroring bitmasks\n    ", end='', file=outfile)
+                for byte in block.mirroring:
                     print("0x{:02X}".format(byte), end=", ", file=outfile)
             print("\n};\n", file=outfile)
 
@@ -237,7 +252,7 @@ def generate_unifont_bin():
     output.append(8)           # Glyph width in pixels
     output.append(16)          # Glyph height in pixels
     output.append(1)           # Flags. 0b00000001 indicates the presence of double-width glyphs.
-    output.append(4)           # Number of bitmasks per block. We have spacing, width, LTR and RTL.
+    output.append(5)           # Number of bitmasks per block. We have spacing, width, LTR, RTL and mirroring.
     output.append(len(blocks)) # Number of blocks in font, lower byte of two-byte short.
     output.append(0)           # upper byte of numBlocks
 
@@ -262,6 +277,7 @@ def generate_unifont_bin():
         output += bytearray(block.widths)
         output += bytearray(block.ltr)
         output += bytearray(block.rtl)
+        output += bytearray(block.mirroring)
     outfile = open('unifont.bin', 'wb')
     outfile.write(output)
 
