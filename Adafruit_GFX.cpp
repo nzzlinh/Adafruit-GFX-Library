@@ -1179,11 +1179,10 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
         return 0;
 
     uint8_t block = c >> 8;
-    uint8_t index = index_for_block(block);
     uint8_t charindex = c & 0x00FF;
 
     bool useProgmem;
-    if (unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+    if (unifont[block].flags & UNIFONT_BLOCK_IN_PROGMEM)
         useProgmem = true;
     else if (unifileavailable)
         useProgmem = false;
@@ -1192,11 +1191,11 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 
     uint8_t tableWidth;
     uint8_t characterWidth;
-    if (unifont[index].flags & UNIFONT_BLOCK_IS_NARROW)
+    if (unifont[block].flags & UNIFONT_BLOCK_IS_NARROW)
     {
         tableWidth = 1;
         characterWidth = 1;
-    } else if (unifont[index].flags & UNIFONT_BLOCK_IS_WIDE)
+    } else if (unifont[block].flags & UNIFONT_BLOCK_IS_WIDE)
     {
         tableWidth = 2;
         characterWidth = 2;
@@ -1215,12 +1214,12 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
     {
         if (useProgmem)
         {
-            const uint8_t *widths = (const uint8_t *)unifont[index].glyphs.location + 4096 * tableWidth + 32;
+            const uint8_t *widths = (const uint8_t *)unifont[block].glyphs.location + 4096 * tableWidth + 32;
             mask = pgm_read_byte(widths + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)unifont[index].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
+            unifile.seek((uint32_t)unifont[block].glyphs.offset + widthOffset + UNIFONT_BITMASK_LENGTH + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1233,16 +1232,16 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
 
     // next determine spacing mode
     bool shouldAdvance;
-    if (unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
+    if (unifont[block].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
     {
         if (useProgmem)
         {
-            const uint8_t *spacings = (const uint8_t *)unifont[index].glyphs.location + 8192;
+            const uint8_t *spacings = (const uint8_t *)unifont[block].glyphs.location + 8192;
             mask = pgm_read_byte(spacings + charindex / 8);
         } else
         {
             #ifdef UNIFONT_USE_FLASH
-            unifile.seek((uint32_t)unifont[index].glyphs.offset + widthOffset + charindex / 8);
+            unifile.seek((uint32_t)unifont[block].glyphs.offset + widthOffset + charindex / 8);
             mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1263,13 +1262,13 @@ int Adafruit_GFX::drawCodepoint(int16_t x, int16_t y, uint16_t c, uint16_t color
         const int16_t start = block == 0 ? 0x20 : 0;
         if (charindex - start < 0) return 0;
         for(int8_t i=0; i<characterWidth*16; i++ )
-            glyph[i] = pgm_read_byte(&unifont[index].glyphs.location[(charindex - start) * 16 * tableWidth + i]);
+            glyph[i] = pgm_read_byte(&unifont[block].glyphs.location[(charindex - start) * 16 * tableWidth + i]);
     }
     else
     {
         #ifdef UNIFONT_USE_FLASH
         uint32_t charOffset = 16 * tableWidth * charindex;
-        unifile.seek((uint32_t)unifont[index].glyphs.offset + charOffset);
+        unifile.seek((uint32_t)unifont[block].glyphs.offset + charOffset);
         unifile.read(&glyph, characterWidth*16);
         #endif // UNIFONT_USE_FLASH
     }
@@ -1398,22 +1397,22 @@ void Adafruit_GFX::fix_diacritics(uint16_t *s, size_t length)
   for (size_t i = 0; i < length - 1; i++)
   {
     // Note: we are checking to see if the character AFTER this one is a non-spacing mark.
-    uint8_t index = index_for_block(s[i + 1] >> 8);
+    uint8_t block = s[i + 1] >> 8;
     uint8_t charindex = s[i + 1] & 0xFF;
 
     // If its block does not have non spacing marks, we don't need to do anything.
-    if (unifont[index].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
+    if (unifont[block].flags & UNIFONT_BLOCK_HAS_NON_SPACING_MARKS)
     {
         // If it does, we need to check.
         uint8_t mask = 0xFF;
-        if (unifont[index].flags & UNIFONT_BLOCK_IN_PROGMEM)
+        if (unifont[block].flags & UNIFONT_BLOCK_IN_PROGMEM)
         {
-            const uint8_t *spacings = (const uint8_t *)unifont[index].glyphs.location + 8192;
+            const uint8_t *spacings = (const uint8_t *)unifont[block].glyphs.location + 8192;
             mask = pgm_read_byte(spacings + charindex / 8);
         } else if (unifileavailable)
         {
             #ifdef UNIFONT_USE_FLASH
-              unifile.seek((uint32_t)unifont[index].glyphs.offset + 8192 + charindex / 8);
+              unifile.seek((uint32_t)unifont[block].glyphs.offset + 8192 + charindex / 8);
               mask = unifile.read();
             #endif // UNIFONT_USE_FLASH
         }
@@ -1697,27 +1696,6 @@ void Adafruit_GFX::getTextBounds(const __FlashStringHelper *str,
         *h  = maxy - miny + 1;
     }
 }
-
-// Unifont skips some blocks entirely (surrogate pairs, private use areas, etc.) so
-// rather than waste precious memory on them, this method takes the desired block
-// and translates it into the index where it can be found.
-inline uint8_t Adafruit_GFX::index_for_block(uint8_t block)
-{
-    if (block <= 0xD7)
-        return block;       // Up to block 0xD7, block and index are the same.
-    if (block >= 0xF9)
-        return block - 33;  // Block 0xF9 appears at index 0xD8, and so on to the end.
-
-    // Blocks from 0xD8 to 0xF8 (inclusive) are invalid:
-    // * Blocks 0xD8 to 0xDF are UTF-16 surrogates.
-    // * Blocks 0xE0 to 0xF8 are private use. Unifont includes some conlangs in here,
-    //   but Klingon feels far enough out of scope that I'm comfortable leaving it out
-    //   for simplicity of implementation.
-    // If an invalid block is passed in, we have to return something, so let's return
-    // the last block, which is full of weird forms anyway.
-    return 0xFF - 33;
-}
-
 
 /**************************************************************************/
 /*!
