@@ -245,7 +245,7 @@ static const uint8_t block_00_data[] PROGMEM = {
 };
 
 const UnifontInclusion BlocksInProgmem[] = {
-    {0x00, {block_00_data, 0b10000010}},
+    {0x00, {block_00_data, 0b10001010}},
 };
 
 #endif // FONT8x16_C
