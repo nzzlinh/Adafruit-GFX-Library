@@ -51,9 +51,10 @@ for line in open('UnicodeData.txt', 'r'):
     if len(line) < 5:
         break
     codepoint = line[0]
+    general_category = line[2]
     bidi_class = line[4]
     info = CodepointInfo()
-    info.isNSM = bidi_class == "NSM"
+    info.isNSM = general_category in ["Mn", "Mc", "Me"] or bidi_class == "NSM"
     info.isLTR = bidi_class in ["L", "LRE", "LRO", "LRI"]
     info.isRTL = bidi_class in ["R", "AL", "RLE", "RLO", "RLI"]
     bidi_info[codepoint] = info
