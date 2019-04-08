@@ -1521,11 +1521,12 @@ void Adafruit_GFX::setTextWrap(boolean w) {
 /**************************************************************************/
 void Adafruit_GFX::setRTL(boolean r)
 {
-    uint8_t newDirection = r ? -1 : 1;
+    int8_t newDirection = r ? -1 : 1;
     if (direction != newDirection)
     {
+        bool onBlankLine = (direction == 1 && cursor_x == 0) || (direction == -1 && cursor_x == (_width - textsize * 8));
         direction = newDirection;
-        if (cursor_y != 0) cursor_y += textsize * 16; // if there is text on this line, move to next line.
+        if (!onBlankLine) cursor_y += textsize * 16; // if there is text on this line, move to next line.
         cursor_x = (direction == 1) ? 0 : (_width - textsize * 8); // Reset x to start of line
     }
 }
